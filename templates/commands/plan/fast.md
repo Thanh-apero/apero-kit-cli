@@ -66,6 +66,15 @@ Use `planner` subagent to:
 - Save the overview access point at `{plan-dir}/plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status and progress plus links to phase files.
 - For each phase, create `{plan-dir}/phase-XX-phase-name-here.md` containing the following sections in order: Context links (reference parent plan, dependencies, docs), Overview (date, description, priority, implementation status, review status), Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps.
 
+## Post-Plan Preview (Optional)
+
+After plan creation, offer to open in browser for easier reading.
+
+Use `AskUserQuestion` tool:
+- "Open plan in browser for easier reading?" → Yes (Recommended) / No
+
+**If user chooses Yes:** Run `/plan:preview {plan-path}` SlashCommand.
+
 ## Important Notes
 
 - **IMPORTANT:** Ensure token consumption efficiency while maintaining high quality.

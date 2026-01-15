@@ -131,6 +131,15 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
 - Execution strategy (e.g., "Phases 1-3 parallel, then Phase 4")
 - File ownership matrix (which phase owns which files)
 
+## Post-Plan Preview (Optional)
+
+After plan creation, offer to open in browser for easier reading.
+
+Use `AskUserQuestion` tool:
+- "Open plan in browser for easier reading?" → Yes (Recommended) / No
+
+**If user chooses Yes:** Run `/plan:preview {plan-path}` SlashCommand.
+
 ## Important Notes
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.

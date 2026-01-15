@@ -45,6 +45,15 @@ After plan creation, offer validation interview to confirm decisions before impl
 **If mode is `prompt`:** Use `AskUserQuestion` tool with options above.
 **If user chooses validation or mode is `auto`:** Execute `/plan:validate {plan-path}` SlashCommand.
 
+## Post-Plan Preview (Optional)
+
+After plan creation, offer to open in browser for easier reading.
+
+Use `AskUserQuestion` tool:
+- "Open plan in browser for easier reading?" → Yes (Recommended) / No
+
+**If user chooses Yes:** Run `/plan:preview {plan-path}` SlashCommand.
+
 ## Output Requirements
 
 **Plan Directory Structure** (use `Plan dir:` from `## Naming` section)
