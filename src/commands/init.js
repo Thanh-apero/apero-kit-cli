@@ -15,30 +15,64 @@ import {
   promptCommands,
   promptIncludeRouter,
   promptIncludeHooks,
-  promptConfirm
+  promptConfirm,
+  promptExistingTarget
 } from '../utils/prompts.js';
 
 export async function initCommand(projectName, options) {
   console.log('');
 
-  // 1. Get project name
-  if (!projectName) {
-    projectName = await promptProjectName();
+  // 1. Get project name (support current directory with "." or empty)
+  let projectDir;
+  let isCurrentDir = false;
+
+  if (!projectName || projectName === '.') {
+    // Use current directory
+    projectDir = process.cwd();
+    projectName = '.';
+    isCurrentDir = true;
+    console.log(chalk.gray(`Initializing in current directory: ${projectDir}`));
+  } else {
+    projectDir = resolve(process.cwd(), projectName);
   }
 
-  const projectDir = resolve(process.cwd(), projectName);
+  // 2. Get target early to check existing
+  let target = options.target || 'claude';
+  if (!TARGETS[target]) {
+    console.log(chalk.yellow(`Unknown target "${target}", using "claude"`));
+    target = 'claude';
+  }
 
-  // Check if directory exists
-  if (fs.existsSync(projectDir) && !options.force) {
+  const targetDir = getTargetDir(projectDir, target);
+  let existingAction = null;
+
+  // Check if target directory (.claude, .opencode, etc.) already exists
+  if (fs.existsSync(targetDir) && !options.force) {
+    if (!process.stdin.isTTY) {
+      // Non-interactive mode - skip
+      console.log(chalk.yellow(`${TARGETS[target]} already exists. Use --force to override.`));
+      return;
+    }
+
+    existingAction = await promptExistingTarget(TARGETS[target]);
+
+    if (existingAction === 'skip') {
+      console.log(chalk.yellow('Skipped. No changes made.'));
+      return;
+    }
+  }
+
+  // For new project directory, check if it exists
+  if (!isCurrentDir && fs.existsSync(projectDir) && !options.force) {
     const files = fs.readdirSync(projectDir);
-    if (files.length > 0) {
+    if (files.length > 0 && !existingAction) {
       console.log(chalk.red(`Directory "${projectName}" already exists and is not empty.`));
       console.log(chalk.gray('Use --force to overwrite.'));
       return;
     }
   }
 
-  // 2. Resolve source
+  // 3. Resolve source
   const source = resolveSource(options.source);
   if (source.error) {
     console.log(chalk.red(`Error: ${source.error}`));
@@ -47,20 +81,18 @@ export async function initCommand(projectName, options) {
 
   console.log(chalk.gray(`Source: ${source.path}`));
 
-  // 3. Get kit
+  // 4. Get kit
   let kitName = options.kit;
-  if (!kitName) {
+  if (!kitName && !options.force) {
     kitName = await promptKit();
+  } else if (!kitName) {
+    kitName = 'engineer'; // Default kit for --force mode
   }
 
-  // 4. Get target
-  let target = options.target || 'claude';
-  if (!TARGETS[target]) {
-    console.log(chalk.yellow(`Unknown target "${target}", using "claude"`));
-    target = 'claude';
-  }
+  // 5. Set merge mode based on existing action
+  const mergeMode = existingAction === 'merge';
 
-  // 5. Prepare what to install
+  // 6. Prepare what to install
   let toInstall = {
     agents: [],
     commands: [],
@@ -134,56 +166,56 @@ export async function initCommand(projectName, options) {
     await fs.ensureDir(targetDir);
 
     // Copy agents
-    spinner.text = 'Copying agents...';
+    spinner.text = mergeMode ? 'Merging agents...' : 'Copying agents...';
     if (toInstall.agents === 'all') {
-      await copyAllOfType('agents', source.claudeDir, targetDir);
+      await copyAllOfType('agents', source.claudeDir, targetDir, mergeMode);
     } else if (toInstall.agents.length > 0) {
-      await copyItems(toInstall.agents, 'agents', source.claudeDir, targetDir);
+      await copyItems(toInstall.agents, 'agents', source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy skills
-    spinner.text = 'Copying skills...';
+    spinner.text = mergeMode ? 'Merging skills...' : 'Copying skills...';
     if (toInstall.skills === 'all') {
-      await copyAllOfType('skills', source.claudeDir, targetDir);
+      await copyAllOfType('skills', source.claudeDir, targetDir, mergeMode);
     } else if (toInstall.skills.length > 0) {
-      await copyItems(toInstall.skills, 'skills', source.claudeDir, targetDir);
+      await copyItems(toInstall.skills, 'skills', source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy commands
-    spinner.text = 'Copying commands...';
+    spinner.text = mergeMode ? 'Merging commands...' : 'Copying commands...';
     if (toInstall.commands === 'all') {
-      await copyAllOfType('commands', source.claudeDir, targetDir);
+      await copyAllOfType('commands', source.claudeDir, targetDir, mergeMode);
     } else if (toInstall.commands.length > 0) {
-      await copyItems(toInstall.commands, 'commands', source.claudeDir, targetDir);
+      await copyItems(toInstall.commands, 'commands', source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy workflows
-    spinner.text = 'Copying workflows...';
+    spinner.text = mergeMode ? 'Merging workflows...' : 'Copying workflows...';
     if (toInstall.workflows === 'all') {
-      await copyAllOfType('workflows', source.claudeDir, targetDir);
+      await copyAllOfType('workflows', source.claudeDir, targetDir, mergeMode);
     } else if (toInstall.workflows && toInstall.workflows.length > 0) {
-      await copyItems(toInstall.workflows, 'workflows', source.claudeDir, targetDir);
+      await copyItems(toInstall.workflows, 'workflows', source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy router
     if (toInstall.includeRouter) {
-      spinner.text = 'Copying router...';
-      await copyRouter(source.claudeDir, targetDir);
+      spinner.text = mergeMode ? 'Merging router...' : 'Copying router...';
+      await copyRouter(source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy hooks
     if (toInstall.includeHooks) {
-      spinner.text = 'Copying hooks...';
-      await copyHooks(source.claudeDir, targetDir);
+      spinner.text = mergeMode ? 'Merging hooks...' : 'Copying hooks...';
+      await copyHooks(source.claudeDir, targetDir, mergeMode);
     }
 
     // Copy base files
-    spinner.text = 'Copying base files...';
-    await copyBaseFiles(source.claudeDir, targetDir);
+    spinner.text = mergeMode ? 'Merging base files...' : 'Copying base files...';
+    await copyBaseFiles(source.claudeDir, targetDir, mergeMode);
 
     // Copy AGENTS.md
     if (source.agentsMd) {
-      await copyAgentsMd(source.agentsMd, projectDir);
+      await copyAgentsMd(source.agentsMd, projectDir, mergeMode);
     }
 
     // Create state file
@@ -202,13 +234,18 @@ export async function initCommand(projectName, options) {
       }
     });
 
-    spinner.succeed(chalk.green('Project created successfully!'));
+    const actionWord = mergeMode ? 'merged' : (existingAction === 'override' ? 'overridden' : 'created');
+    spinner.succeed(chalk.green(`Project ${actionWord} successfully!`));
 
     // Print next steps
     console.log('');
-    console.log(chalk.cyan('Next steps:'));
-    console.log(chalk.white(`  cd ${projectName}`));
-    console.log(chalk.white('  # Start coding with Claude Code'));
+    if (!isCurrentDir) {
+      console.log(chalk.cyan('Next steps:'));
+      console.log(chalk.white(`  cd ${projectName}`));
+      console.log(chalk.white('  # Start coding with Claude Code'));
+    } else {
+      console.log(chalk.cyan('Ready to code with Claude Code!'));
+    }
     console.log('');
     console.log(chalk.gray('Useful commands:'));
     console.log(chalk.gray('  ak status     - Check file status'));

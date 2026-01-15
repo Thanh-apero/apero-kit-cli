@@ -208,6 +208,25 @@ export async function promptConfirm(message, defaultValue = true) {
 }
 
 /**
+ * Prompt for existing target directory action
+ */
+export async function promptExistingTarget(targetPath) {
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: `${targetPath} already exists. What do you want to do?`,
+      choices: [
+        { name: '🔄 Override - Replace all files', value: 'override' },
+        { name: '📦 Merge - Only add missing files', value: 'merge' },
+        { name: '⏭️  Skip - Do nothing', value: 'skip' }
+      ]
+    }
+  ]);
+  return action;
+}
+
+/**
  * Prompt for update confirmation with file list
  */
 export async function promptUpdateConfirm(updates) {

@@ -3,8 +3,9 @@ import { join, basename } from 'path';
 
 /**
  * Copy specific items from source to destination
+ * @param {boolean} mergeMode - If true, skip existing files
  */
-export async function copyItems(items, type, sourceDir, destDir) {
+export async function copyItems(items, type, sourceDir, destDir, mergeMode = false) {
   const typeDir = join(sourceDir, type);
   const destTypeDir = join(destDir, type);
 
@@ -37,14 +38,14 @@ export async function copyItems(items, type, sourceDir, destDir) {
       // Determine destination path
       const stat = fs.statSync(srcPath);
       if (stat.isDirectory()) {
-        await fs.copy(srcPath, join(destTypeDir, item), { overwrite: true });
+        await fs.copy(srcPath, join(destTypeDir, item), { overwrite: !mergeMode });
       } else {
         // Preserve directory structure for nested items
         const destPath = srcPath.endsWith('.md')
           ? join(destTypeDir, item + '.md')
           : join(destTypeDir, item);
         await fs.ensureDir(join(destTypeDir, item.split('/').slice(0, -1).join('/')));
-        await fs.copy(srcPath, destPath, { overwrite: true });
+        await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
       }
 
       copied.push(item);
@@ -58,8 +59,9 @@ export async function copyItems(items, type, sourceDir, destDir) {
 
 /**
  * Copy all items of a type
+ * @param {boolean} mergeMode - If true, skip existing files
  */
-export async function copyAllOfType(type, sourceDir, destDir) {
+export async function copyAllOfType(type, sourceDir, destDir, mergeMode = false) {
   const typeDir = join(sourceDir, type);
   const destTypeDir = join(destDir, type);
 
@@ -68,7 +70,7 @@ export async function copyAllOfType(type, sourceDir, destDir) {
   }
 
   try {
-    await fs.copy(typeDir, destTypeDir, { overwrite: true });
+    await fs.copy(typeDir, destTypeDir, { overwrite: !mergeMode });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -77,8 +79,9 @@ export async function copyAllOfType(type, sourceDir, destDir) {
 
 /**
  * Copy router directory
+ * @param {boolean} mergeMode - If true, skip existing files
  */
-export async function copyRouter(sourceDir, destDir) {
+export async function copyRouter(sourceDir, destDir, mergeMode = false) {
   const routerDir = join(sourceDir, 'router');
 
   if (!fs.existsSync(routerDir)) {
@@ -86,7 +89,7 @@ export async function copyRouter(sourceDir, destDir) {
   }
 
   try {
-    await fs.copy(routerDir, join(destDir, 'router'), { overwrite: true });
+    await fs.copy(routerDir, join(destDir, 'router'), { overwrite: !mergeMode });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -95,8 +98,9 @@ export async function copyRouter(sourceDir, destDir) {
 
 /**
  * Copy hooks directory
+ * @param {boolean} mergeMode - If true, skip existing files
  */
-export async function copyHooks(sourceDir, destDir) {
+export async function copyHooks(sourceDir, destDir, mergeMode = false) {
   const hooksDir = join(sourceDir, 'hooks');
 
   if (!fs.existsSync(hooksDir)) {
@@ -104,7 +108,7 @@ export async function copyHooks(sourceDir, destDir) {
   }
 
   try {
-    await fs.copy(hooksDir, join(destDir, 'hooks'), { overwrite: true });
+    await fs.copy(hooksDir, join(destDir, 'hooks'), { overwrite: !mergeMode });
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -123,15 +127,23 @@ export async function copyWorkflows(items, sourceDir, destDir) {
 
 /**
  * Copy base files (README, settings, etc.)
+ * @param {boolean} mergeMode - If true, skip existing files
  */
-export async function copyBaseFiles(sourceDir, destDir) {
+export async function copyBaseFiles(sourceDir, destDir, mergeMode = false) {
   const baseFiles = ['README.md', 'settings.json', '.env.example'];
   const copied = [];
 
   for (const file of baseFiles) {
     const srcPath = join(sourceDir, file);
+    const destPath = join(destDir, file);
+
+    // Skip if merge mode and file exists
+    if (mergeMode && fs.existsSync(destPath)) {
+      continue;
+    }
+
     if (fs.existsSync(srcPath)) {
-      await fs.copy(srcPath, join(destDir, file), { overwrite: true });
+      await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
       copied.push(file);
     }
   }
@@ -141,13 +153,21 @@ export async function copyBaseFiles(sourceDir, destDir) {
 
 /**
  * Copy AGENTS.md to project root
+ * @param {boolean} mergeMode - If true, skip if file exists
  */
-export async function copyAgentsMd(agentsMdPath, projectDir) {
+export async function copyAgentsMd(agentsMdPath, projectDir, mergeMode = false) {
   if (!agentsMdPath || !fs.existsSync(agentsMdPath)) {
     return false;
   }
 
-  await fs.copy(agentsMdPath, join(projectDir, 'AGENTS.md'), { overwrite: true });
+  const destPath = join(projectDir, 'AGENTS.md');
+
+  // Skip if merge mode and file exists
+  if (mergeMode && fs.existsSync(destPath)) {
+    return false;
+  }
+
+  await fs.copy(agentsMdPath, destPath, { overwrite: !mergeMode });
   return true;
 }
 
