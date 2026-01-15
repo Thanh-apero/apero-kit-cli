@@ -703,17 +703,6 @@ function generateNav(activeSection, t, lang) {
         </a>
       `).join('')}
     </div>
-    <div class="nav-section">
-      <h3>${t.resources}</h3>
-      <a href="https://github.com/Thanh-apero/apero-kit-cli" target="_blank">
-        <span class="icon">📦</span>
-        <span>${t.github}</span>
-      </a>
-      <a href="https://www.npmjs.com/package/apero-kit-cli" target="_blank">
-        <span class="icon">📥</span>
-        <span>${t.npm}</span>
-      </a>
-    </div>
   </nav>`;
 }
 
