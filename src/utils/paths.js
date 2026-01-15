@@ -9,12 +9,31 @@ const __dirname = dirname(__filename);
 // CLI root directory
 export const CLI_ROOT = resolve(__dirname, '../..');
 
+// Embedded templates directory (inside CLI package)
+export const TEMPLATES_DIR = join(CLI_ROOT, 'templates');
+
 // Target folder mappings
 export const TARGETS = {
   claude: '.claude',
   opencode: '.opencode',
   generic: '.agent'
 };
+
+/**
+ * Get embedded templates (bundled with CLI)
+ */
+export function getEmbeddedTemplates() {
+  if (existsSync(TEMPLATES_DIR)) {
+    const agentsMd = join(TEMPLATES_DIR, 'AGENTS.md');
+    return {
+      path: TEMPLATES_DIR,
+      type: 'embedded',
+      claudeDir: TEMPLATES_DIR,
+      agentsMd: existsSync(agentsMd) ? agentsMd : null
+    };
+  }
+  return null;
+}
 
 /**
  * Find source directory by traversing up from cwd
@@ -122,9 +141,11 @@ export function getTargetDir(projectDir, target = 'claude') {
 }
 
 /**
- * Resolve source path (from --source flag or auto-detect)
+ * Resolve source path (from --source flag, embedded templates, or auto-detect)
+ * Priority: 1. --source flag  2. Embedded templates  3. Auto-detect in parent dirs
  */
 export function resolveSource(sourceFlag) {
+  // 1. If --source flag provided, use it
   if (sourceFlag) {
     const resolved = resolve(sourceFlag);
     if (!existsSync(resolved)) {
@@ -138,6 +159,7 @@ export function resolveSource(sourceFlag) {
     if (existsSync(claudeDir)) {
       return {
         path: resolved,
+        type: 'custom',
         claudeDir,
         agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null
       };
@@ -146,6 +168,7 @@ export function resolveSource(sourceFlag) {
     if (existsSync(opencodeDir)) {
       return {
         path: resolved,
+        type: 'custom',
         claudeDir: opencodeDir,
         agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null
       };
@@ -154,13 +177,19 @@ export function resolveSource(sourceFlag) {
     return { error: `No .claude/ or .opencode/ found in: ${sourceFlag}` };
   }
 
-  // Auto-detect
-  const found = findSource();
-  if (!found) {
-    return {
-      error: 'Could not find source. Use --source flag or ensure AGENTS.md/.claude/ exists in parent directories.'
-    };
+  // 2. Use embedded templates (bundled with CLI) - PREFERRED
+  const embedded = getEmbeddedTemplates();
+  if (embedded) {
+    return embedded;
   }
 
-  return found;
+  // 3. Fallback: auto-detect in parent directories
+  const found = findSource();
+  if (found) {
+    return found;
+  }
+
+  return {
+    error: 'No templates found. The CLI package may be corrupted. Try reinstalling: npm install -g apero-kit-cli'
+  };
 }

@@ -114,9 +114,12 @@ export async function initCommand(projectName, options) {
 
   console.log('');
 
-  if (!await promptConfirm('Proceed?')) {
-    console.log(chalk.yellow('Cancelled.'));
-    return;
+  // Skip confirmation if --force is set
+  if (!options.force) {
+    if (!await promptConfirm('Proceed?')) {
+      console.log(chalk.yellow('Cancelled.'));
+      return;
+    }
   }
 
   // 7. Create project
