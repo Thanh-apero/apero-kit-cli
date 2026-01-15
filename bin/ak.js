@@ -8,8 +8,9 @@ import { listCommand } from '../src/commands/list.js';
 import { updateCommand } from '../src/commands/update.js';
 import { statusCommand } from '../src/commands/status.js';
 import { doctorCommand } from '../src/commands/doctor.js';
+import { helpCommand } from '../src/commands/help.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.4.0';
 
 console.log(chalk.cyan.bold('\n  Apero Kit CLI') + chalk.gray(` v${VERSION}\n`));
 
@@ -74,5 +75,12 @@ program
   .command('kits')
   .description('List all available kits')
   .action(() => listCommand('kits'));
+
+// ak help - interactive documentation
+program
+  .command('help')
+  .description('Open interactive help documentation in browser')
+  .option('-s, --source <path>', 'Custom source path')
+  .action(helpCommand);
 
 program.parse();
