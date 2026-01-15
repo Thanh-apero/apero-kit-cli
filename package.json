@@ -4,8 +4,8 @@
   "description": "CLI tool to scaffold AI agent projects with pre-configured kits (Claude, OpenCode, Codex)",
   "type": "module",
   "bin": {
-    "ak": "./bin/ak.js",
-    "apero-kit": "./bin/ak.js"
+    "ak": "bin/ak.js",
+    "apero-kit": "bin/ak.js"
   },
   "main": "src/index.js",
   "exports": {
@@ -42,11 +42,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AperoDev/apero-kit-cli.git"
+    "url": "git+https://github.com/Thanh-apero/apero-kit-cli.git"
   },
-  "homepage": "https://github.com/AperoDev/apero-kit-cli#readme",
+  "homepage": "https://github.com/Thanh-apero/apero-kit-cli#readme",
   "bugs": {
-    "url": "https://github.com/AperoDev/apero-kit-cli/issues"
+    "url": "https://github.com/Thanh-apero/apero-kit-cli/issues"
   },
   "engines": {
     "node": ">=18.0.0"
