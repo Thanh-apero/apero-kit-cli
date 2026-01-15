@@ -1,6 +1,6 @@
 {
   "name": "apero-kit-cli",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "CLI tool to scaffold AI agent projects with pre-configured kits (Claude, OpenCode, Codex)",
   "type": "module",
   "bin": {

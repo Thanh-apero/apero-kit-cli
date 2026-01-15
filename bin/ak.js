@@ -10,7 +10,7 @@ import { statusCommand } from '../src/commands/status.js';
 import { doctorCommand } from '../src/commands/doctor.js';
 import { helpCommand } from '../src/commands/help.js';
 
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 
 console.log(chalk.cyan.bold('\n  Apero Kit CLI') + chalk.gray(` v${VERSION}\n`));
 
