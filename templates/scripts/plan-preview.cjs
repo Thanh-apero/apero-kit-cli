@@ -33,44 +33,13 @@ if (!fs.existsSync(fullPlanPath)) {
   process.exit(1);
 }
 
-// Simple markdown to HTML converter
-function markdownToHtml(md) {
-  return md
-    // Code blocks with language
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-      const langClass = lang ? `language-${lang}` : '';
-      return `<pre class="${langClass}"><code>${escapeHtml(code.trim())}</code></pre>`;
-    })
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
-    // Headers
-    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-    // Bold and italic
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-    // Lists
-    .replace(/^\s*[-*] (.*$)/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)\n(?!<li>)/g, '$1</ul>\n')
-    .replace(/(?<!<\/li>\n)(<li>)/g, '<ul>$1')
-    // Numbered lists
-    .replace(/^\s*\d+\. (.*$)/gm, '<li class="numbered">$1</li>')
-    // Blockquotes
-    .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
-    // Horizontal rules
-    .replace(/^---+$/gm, '<hr>')
-    // Paragraphs
-    .replace(/\n\n/g, '</p><p>')
-    // Tables (simple)
-    .replace(/\|(.+)\|/g, (match) => {
-      const cells = match.split('|').filter(c => c.trim());
-      if (cells.every(c => /^[-:]+$/.test(c.trim()))) return ''; // Skip separator
-      const tag = 'td';
-      return '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
-    });
+// Markdown to HTML - Uses marked.js on client-side for full GFM support
+// Server just passes raw markdown, client renders with marked.js
+function markdownToHtml(md, forEditor = false) {
+  // For editor preview pane, we'll render client-side with marked.js
+  // For static preview, we embed raw markdown and render on page load
+  const encodedMd = encodeURIComponent(md);
+  return `<div class="markdown-body" data-markdown="${encodedMd}"><noscript>${escapeHtml(md)}</noscript><div class="loading">Loading...</div></div>`;
 }
 
 function escapeHtml(text) {
@@ -134,6 +103,22 @@ function generatePage(files, currentFile, mode = 'preview') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plan Preview - ${path.basename(fullPlanPath)}</title>
+
+  <!-- marked.js - Markdown Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Prism.js - Syntax Highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+
   <style>
     :root {
       --bg: #0d1117;
@@ -467,6 +452,171 @@ function generatePage(files, currentFile, mode = 'preview') {
       justify-content: space-between;
     }
 
+    /* GitHub-style Markdown Body */
+    .markdown-body {
+      line-height: 1.7;
+    }
+
+    .markdown-body .loading {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .markdown-body h1 {
+      font-size: 2em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3em;
+      margin: 24px 0 16px;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.5em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3em;
+      margin: 24px 0 16px;
+    }
+
+    .markdown-body h3 {
+      font-size: 1.25em;
+      margin: 24px 0 16px;
+    }
+
+    .markdown-body h4 {
+      font-size: 1em;
+      margin: 24px 0 16px;
+    }
+
+    .markdown-body p {
+      margin: 0 0 16px;
+    }
+
+    .markdown-body ul, .markdown-body ol {
+      margin: 0 0 16px;
+      padding-left: 2em;
+    }
+
+    .markdown-body li {
+      margin: 4px 0;
+    }
+
+    .markdown-body li > p {
+      margin: 0;
+    }
+
+    /* Task Lists */
+    .markdown-body input[type="checkbox"] {
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .markdown-body li.task-list-item {
+      list-style: none;
+      margin-left: -1.5em;
+    }
+
+    /* Tables - GitHub style */
+    .markdown-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .markdown-body thead {
+      background: var(--bg-tertiary);
+    }
+
+    .markdown-body th, .markdown-body td {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .markdown-body th {
+      font-weight: 600;
+    }
+
+    .markdown-body tbody tr:nth-child(even) {
+      background: var(--bg-secondary);
+    }
+
+    .markdown-body tbody tr:hover {
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    /* Code blocks with Prism */
+    .markdown-body pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    .markdown-body pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .markdown-body code {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      font-size: 85%;
+      background: var(--code-bg);
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* Blockquotes */
+    .markdown-body blockquote {
+      border-left: 4px solid var(--accent);
+      padding: 0 16px;
+      margin: 16px 0;
+      color: var(--text-muted);
+    }
+
+    .markdown-body blockquote > :first-child {
+      margin-top: 0;
+    }
+
+    .markdown-body blockquote > :last-child {
+      margin-bottom: 0;
+    }
+
+    /* Images */
+    .markdown-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    /* Horizontal Rule */
+    .markdown-body hr {
+      border: none;
+      border-top: 2px solid var(--border);
+      margin: 32px 0;
+    }
+
+    /* Links */
+    .markdown-body a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .markdown-body a:hover {
+      text-decoration: underline;
+    }
+
+    /* Strikethrough */
+    .markdown-body del {
+      color: var(--text-muted);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .sidebar { width: 100%; height: auto; position: relative; }
@@ -475,6 +625,16 @@ function generatePage(files, currentFile, mode = 'preview') {
       .editor-container { flex-direction: column; height: auto; }
       .editor { min-height: 300px; }
       .preview-pane { min-height: 300px; }
+    }
+
+    /* Print styles */
+    @media print {
+      .sidebar, .toolbar, .mode-toggle, .footer { display: none !important; }
+      .main { margin-left: 0; padding: 20px; }
+      body { background: white; color: black; }
+      .markdown-body pre { border: 1px solid #ddd; background: #f5f5f5; }
+      .markdown-body code { background: #f5f5f5; color: #333; }
+      .markdown-body a { color: #0366d6; }
     }
   </style>
 </head>
@@ -535,6 +695,36 @@ function generatePage(files, currentFile, mode = 'preview') {
 
     originalContent = editor.value;
 
+    // Configure marked.js for GitHub Flavored Markdown
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+      headerIds: true,
+      mangle: false
+    });
+
+    // Custom renderer for syntax highlighting with Prism
+    const renderer = new marked.Renderer();
+    renderer.code = function(code, language) {
+      const lang = language || '';
+      const validLang = Prism.languages[lang] ? lang : 'plaintext';
+      let highlighted;
+      try {
+        highlighted = Prism.languages[validLang]
+          ? Prism.highlight(code, Prism.languages[validLang], validLang)
+          : code;
+      } catch (e) {
+        highlighted = code;
+      }
+      return '<pre class="language-' + validLang + '"><code class="language-' + validLang + '">' + highlighted + '</code></pre>';
+    };
+    marked.setOptions({ renderer });
+
+    // Render markdown with marked.js
+    function renderMarkdown(md) {
+      return marked.parse(md);
+    }
+
     // Live preview update
     let updateTimeout;
     editor.addEventListener('input', () => {
@@ -543,26 +733,15 @@ function generatePage(files, currentFile, mode = 'preview') {
 
       clearTimeout(updateTimeout);
       updateTimeout = setTimeout(() => {
-        preview.innerHTML = simpleMarkdown(editor.value);
-      }, 300);
+        preview.innerHTML = renderMarkdown(editor.value);
+        // Re-run Prism highlighting for any code blocks
+        Prism.highlightAllUnder(preview);
+      }, 150);
     });
 
-    // Simple client-side markdown (for live preview)
-    function simpleMarkdown(md) {
-      return md
-        .replace(/\`\`\`(\\w+)?\\n([\\s\\S]*?)\`\`\`/g, '<pre><code>$2</code></pre>')
-        .replace(/\`([^\`]+)\`/g, '<code class="inline">$1</code>')
-        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
-        .replace(/\\*([^*]+)\\*/g, '<em>$1</em>')
-        .replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2">$1</a>')
-        .replace(/^\\s*[-*] (.*$)/gm, '<li>$1</li>')
-        .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
-        .replace(/^---+$/gm, '<hr>')
-        .replace(/\\n\\n/g, '</p><p>');
-    }
+    // Initial render
+    preview.innerHTML = renderMarkdown(editor.value);
+    Prism.highlightAllUnder(preview);
 
     // Update status indicator
     function updateStatus() {
@@ -632,7 +811,42 @@ function generatePage(files, currentFile, mode = 'preview') {
         e.returnValue = '';
       }
     });
-    ` : ''}
+    ` : `
+    // Preview mode: Render markdown on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Configure marked.js
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        headerIds: true,
+        mangle: false
+      });
+
+      // Custom renderer for syntax highlighting with Prism
+      const renderer = new marked.Renderer();
+      renderer.code = function(code, language) {
+        const lang = language || '';
+        const validLang = Prism.languages[lang] ? lang : 'plaintext';
+        let highlighted;
+        try {
+          highlighted = Prism.languages[validLang]
+            ? Prism.highlight(code, Prism.languages[validLang], validLang)
+            : code;
+        } catch (e) {
+          highlighted = code;
+        }
+        return '<pre class="language-' + validLang + '"><code class="language-' + validLang + '">' + highlighted + '</code></pre>';
+      };
+      marked.setOptions({ renderer });
+
+      // Find all markdown bodies and render them
+      document.querySelectorAll('.markdown-body[data-markdown]').forEach(el => {
+        const rawMd = decodeURIComponent(el.dataset.markdown);
+        el.innerHTML = marked.parse(rawMd);
+        Prism.highlightAllUnder(el);
+      });
+    });
+    `}
   </script>
 </body>
 </html>`;
