@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "createdAt": "2026-02-24T17:31:12.717Z",
-  "lastUpdate": "2026-02-24T17:31:12.719Z",
+  "createdAt": "2026-02-24T17:36:01.081Z",
+  "lastUpdate": "2026-02-24T17:36:01.082Z",
   "kit": "full",
   "source": "/opt/homebrew/lib/node_modules/apero-kit-cli/templates",
   "target": ".discord",
@@ -141,7 +141,7 @@
     ".discord/commands/watzup.md": "d02f08205c1b865efe24125ff36e92c7",
     ".discord/commands/worktree.md": "f40c7ebc219941a8d2c6f6630befa354",
     ".discord/commands.json5": "cd647b29f89e4e9302cd1521e58f179e",
-    ".discord/config.json5": "e94510e953bf48353d0b62af730b6f1d",
+    ".discord/config.json5": "de2fb784bc2be96cdc9465f51bf149d3",
     ".discord/skills/ai-artist/SKILL.md": "151d50e62337ca5594cad7614f3640c4",
     ".discord/skills/ai-artist/references/advanced-techniques.md": "b36ae30c59d37ee8a2573162bb765479",
     ".discord/skills/ai-artist/references/domain-code.md": "025ccbac19e5a3e90fe80202e596ecd6",

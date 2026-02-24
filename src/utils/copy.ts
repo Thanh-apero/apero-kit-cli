@@ -1098,6 +1098,9 @@ export async function setupOpenClawConfig(token: string): Promise<{ success: boo
     // Enable Discord channel
     execSync('openclaw config set channels.discord.enabled true --json', { stdio: 'ignore' });
 
+    // Set gateway mode to local (required for openclaw gateway to start)
+    execSync('openclaw config set gateway.mode local', { stdio: 'ignore' });
+
     return { success: true, message: 'OpenClaw configured successfully!' };
   } catch (error: any) {
     return { success: false, message: `Failed to configure OpenClaw: ${error.message}` };
