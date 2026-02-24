@@ -188,8 +188,10 @@ function isDiscordConfigured(): boolean {
 function restartGateway(): boolean {
   try {
     const { execSync } = require('child_process');
-    console.log(pc.cyan('Restarting OpenClaw gateway...'));
-    execSync('openclaw gateway restart', { stdio: 'inherit' });
+    // Ensure gateway.mode is set before restart
+    execSync('openclaw config set gateway.mode local', { stdio: 'ignore' });
+    console.log(pc.cyan('Starting OpenClaw gateway...'));
+    execSync('openclaw gateway', { stdio: 'inherit' });
     return true;
   } catch {
     return false;
