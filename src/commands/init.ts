@@ -369,8 +369,8 @@ export async function initCommand(projectName: string | undefined, options: Reco
         spinner.text = mergeMode ? `Merging config (${targetLabel})...` : `Copying config (${targetLabel})...`;
         await copyDiscordBaseFiles(targetDir, mergeMode);
 
-        // Apply Discord config if provided
-        if (discordConfig) {
+        // Apply Discord config if provided (skip if restartOnly)
+        if (discordConfig && !discordConfig.restartOnly) {
           spinner.text = 'Configuring Discord bot...';
           await updateDiscordConfig(targetDir, discordConfig.token, discordConfig.guildId);
 
@@ -383,6 +383,8 @@ export async function initCommand(projectName: string | undefined, options: Reco
               console.log(pc.yellow(`\n  Note: ${result.message}`));
             }
           }
+        } else if (discordConfig?.restartOnly) {
+          openclawSetupSuccess = true; // Already configured
         }
       }
     }

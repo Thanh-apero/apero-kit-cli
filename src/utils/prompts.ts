@@ -162,12 +162,34 @@ export interface DiscordConfig {
   guildId?: string;
   autoSetup: boolean;
   openclawInstalled: boolean;
+  restartOnly?: boolean;
 }
 
 function isOpenClawInstalled(): boolean {
   try {
     const { execSync } = require('child_process');
     execSync('which openclaw', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isDiscordConfigured(): boolean {
+  try {
+    const { execSync } = require('child_process');
+    const result = execSync('openclaw config get channels.discord.token 2>/dev/null', { encoding: 'utf-8' });
+    return result && result.trim().length > 10;
+  } catch {
+    return false;
+  }
+}
+
+function restartGateway(): boolean {
+  try {
+    const { execSync } = require('child_process');
+    console.log(pc.cyan('Restarting OpenClaw gateway...'));
+    execSync('openclaw gateway restart', { stdio: 'inherit' });
     return true;
   } catch {
     return false;
@@ -208,6 +230,41 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
 
     if (shouldInstall) {
       openclawInstalled = await installOpenClaw();
+    }
+  }
+
+  // Check if Discord is already configured
+  if (openclawInstalled && isDiscordConfigured()) {
+    console.log(pc.green('✓ Discord bot token already configured.'));
+    console.log('');
+
+    const action = await p.select({
+      message: 'What do you want to do?',
+      options: [
+        { value: 'restart', label: 'Restart gateway', hint: 'Use existing config' },
+        { value: 'reconfigure', label: 'Reconfigure', hint: 'Enter new token' },
+        { value: 'skip', label: 'Skip setup', hint: 'Continue without changes' }
+      ]
+    });
+    if (p.isCancel(action)) process.exit(0);
+
+    if (action === 'restart') {
+      restartGateway();
+      return {
+        token: '',
+        autoSetup: false,
+        openclawInstalled: true,
+        restartOnly: true
+      };
+    }
+
+    if (action === 'skip') {
+      return {
+        token: '',
+        autoSetup: false,
+        openclawInstalled: true,
+        restartOnly: true
+      };
     }
   }
 
