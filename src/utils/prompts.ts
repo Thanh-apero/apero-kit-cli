@@ -161,6 +161,7 @@ export interface DiscordConfig {
   token: string;
   guildId?: string;
   autoSetup: boolean;
+  openclawInstalled: boolean;
 }
 
 function isOpenClawInstalled(): boolean {
@@ -173,16 +174,41 @@ function isOpenClawInstalled(): boolean {
   }
 }
 
+async function installOpenClaw(): Promise<boolean> {
+  const { execSync } = require('child_process');
+  try {
+    console.log(pc.cyan('Installing OpenClaw CLI...'));
+    execSync('npm install -g openclaw', { stdio: 'inherit' });
+    console.log(pc.green('✓ OpenClaw CLI installed successfully!'));
+    console.log('');
+    return true;
+  } catch (error) {
+    console.log(pc.red('✗ Failed to install OpenClaw CLI'));
+    console.log(pc.gray('  Try manually: npm install -g openclaw'));
+    console.log('');
+    return false;
+  }
+}
+
 export async function promptDiscordSetup(): Promise<DiscordConfig> {
   console.log('');
   console.log(pc.cyan('━━━ Discord Bot Setup ━━━'));
 
   // Check if openclaw is installed
-  const openclawInstalled = isOpenClawInstalled();
+  let openclawInstalled = isOpenClawInstalled();
   if (!openclawInstalled) {
-    console.log(pc.yellow('⚠ OpenClaw CLI not found. Install it first:'));
-    console.log(pc.white('  npm install -g openclaw'));
+    console.log(pc.yellow('⚠ OpenClaw CLI not found.'));
     console.log('');
+
+    const shouldInstall = await p.confirm({
+      message: 'Install OpenClaw CLI now? (npm install -g openclaw)',
+      initialValue: true
+    });
+    if (p.isCancel(shouldInstall)) process.exit(0);
+
+    if (shouldInstall) {
+      openclawInstalled = await installOpenClaw();
+    }
   }
 
   console.log(pc.gray('Get your bot token from: https://discord.com/developers/applications'));
@@ -218,15 +244,21 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
     guildId = guild as string;
   }
 
-  const autoSetup = await p.confirm({
-    message: 'Auto-setup OpenClaw config? (requires openclaw CLI)',
-    initialValue: true
-  });
-  if (p.isCancel(autoSetup)) process.exit(0);
+  // Only ask for auto-setup if openclaw is installed
+  let autoSetup = false;
+  if (openclawInstalled) {
+    const shouldAutoSetup = await p.confirm({
+      message: 'Auto-setup OpenClaw config?',
+      initialValue: true
+    });
+    if (p.isCancel(shouldAutoSetup)) process.exit(0);
+    autoSetup = shouldAutoSetup as boolean;
+  }
 
   return {
     token: token as string,
     guildId,
-    autoSetup: autoSetup as boolean
+    autoSetup,
+    openclawInstalled
   };
 }

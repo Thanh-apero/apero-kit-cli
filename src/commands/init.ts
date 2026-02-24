@@ -437,13 +437,8 @@ export async function initCommand(projectName: string | undefined, options: Reco
       console.log('');
       console.log(pc.cyan('Discord Bot Setup:'));
 
-      // Check if openclaw is installed
-      let openclawInstalled = false;
-      try {
-        const { execSync } = await import('child_process');
-        execSync('which openclaw', { stdio: 'ignore' });
-        openclawInstalled = true;
-      } catch {}
+      // Use openclawInstalled from discordConfig (tracks if user installed during setup)
+      const openclawInstalled = discordConfig?.openclawInstalled ?? false;
 
       if (!openclawInstalled) {
         console.log(pc.yellow('  0. npm install -g openclaw  - Install OpenClaw CLI first!'));
@@ -452,7 +447,9 @@ export async function initCommand(projectName: string | undefined, options: Reco
         console.log(pc.white('  3. DM the bot to pair       - Approve with: openclaw pairing approve discord <code>'));
       } else {
         if (openclawSetupSuccess) {
-          console.log(pc.green('  ✓ OpenClaw configured'));
+          console.log(pc.green('  ✓ OpenClaw installed & configured'));
+        } else {
+          console.log(pc.green('  ✓ OpenClaw installed'));
         }
         console.log(pc.white('  1. openclaw gateway         - Start the bot'));
         console.log(pc.white('  2. Invite bot to server     - Use OAuth2 URL from Discord Portal'));
