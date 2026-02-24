@@ -1,0 +1,12 @@
+{
+  "$schema": "https://geminicli.com/schemas/settings.json",
+  "experimental": {
+    "plan": true,
+    "enableAgents": true
+  },
+  "general": {
+    "plan": {
+      "directory": "plans"
+    }
+  }
+}
