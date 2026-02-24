@@ -110,6 +110,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
 
   // Discord setup - prompt for token if Discord is selected
   let discordConfig: DiscordConfig | null = null;
+  let openclawSetupSuccess = false;
   if (cliTargets.includes('discord') && process.stdin.isTTY && !options.yes) {
     discordConfig = await promptDiscordSetup();
   }
@@ -377,6 +378,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
           if (discordConfig.autoSetup) {
             spinner.text = 'Setting up OpenClaw...';
             const result = await setupOpenClawConfig(discordConfig.token);
+            openclawSetupSuccess = result.success;
             if (!result.success) {
               console.log(pc.yellow(`\n  Note: ${result.message}`));
             }
@@ -434,12 +436,28 @@ export async function initCommand(projectName: string | undefined, options: Reco
     if (cliTargets.includes('discord')) {
       console.log('');
       console.log(pc.cyan('Discord Bot Setup:'));
-      if (discordConfig?.autoSetup) {
-        console.log(pc.green('  ✓ OpenClaw configured'));
+
+      // Check if openclaw is installed
+      let openclawInstalled = false;
+      try {
+        const { execSync } = await import('child_process');
+        execSync('which openclaw', { stdio: 'ignore' });
+        openclawInstalled = true;
+      } catch {}
+
+      if (!openclawInstalled) {
+        console.log(pc.yellow('  0. npm install -g openclaw  - Install OpenClaw CLI first!'));
+        console.log(pc.white('  1. openclaw gateway         - Start the bot'));
+        console.log(pc.white('  2. Invite bot to server     - Use OAuth2 URL from Discord Portal'));
+        console.log(pc.white('  3. DM the bot to pair       - Approve with: openclaw pairing approve discord <code>'));
+      } else {
+        if (openclawSetupSuccess) {
+          console.log(pc.green('  ✓ OpenClaw configured'));
+        }
+        console.log(pc.white('  1. openclaw gateway         - Start the bot'));
+        console.log(pc.white('  2. Invite bot to server     - Use OAuth2 URL from Discord Portal'));
+        console.log(pc.white('  3. DM the bot to pair       - Approve with: openclaw pairing approve discord <code>'));
       }
-      console.log(pc.white('  1. openclaw gateway        - Start the bot'));
-      console.log(pc.white('  2. Invite bot to server    - Use OAuth2 URL from Discord Portal'));
-      console.log(pc.white('  3. DM the bot to pair      - Approve with: openclaw pairing approve discord <code>'));
       console.log(pc.gray('  See .discord/README.md for full guide'));
     }
     console.log('');

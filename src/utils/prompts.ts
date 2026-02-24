@@ -163,9 +163,28 @@ export interface DiscordConfig {
   autoSetup: boolean;
 }
 
+function isOpenClawInstalled(): boolean {
+  try {
+    const { execSync } = require('child_process');
+    execSync('which openclaw', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function promptDiscordSetup(): Promise<DiscordConfig> {
   console.log('');
   console.log(pc.cyan('━━━ Discord Bot Setup ━━━'));
+
+  // Check if openclaw is installed
+  const openclawInstalled = isOpenClawInstalled();
+  if (!openclawInstalled) {
+    console.log(pc.yellow('⚠ OpenClaw CLI not found. Install it first:'));
+    console.log(pc.white('  npm install -g openclaw'));
+    console.log('');
+  }
+
   console.log(pc.gray('Get your bot token from: https://discord.com/developers/applications'));
   console.log('');
 
