@@ -1038,6 +1038,72 @@ export async function copyDiscordBaseFiles(
   return copied;
 }
 
+/**
+ * Update Discord config with bot token and optional guild ID
+ */
+export async function updateDiscordConfig(
+  destDir: string,
+  token: string,
+  guildId?: string
+): Promise<void> {
+  const configPath = join(destDir, 'config.json5');
+
+  if (!fs.existsSync(configPath)) {
+    return;
+  }
+
+  let content = await fs.readFile(configPath, 'utf-8');
+
+  // Replace token placeholder with actual token
+  content = content.replace(
+    '"token": "${DISCORD_BOT_TOKEN}"',
+    `"token": "${token}"`
+  );
+
+  // If guild ID is provided, add it to the guilds config
+  if (guildId) {
+    const guildConfig = `"${guildId}": {
+          "requireMention": true,
+          "users": [],
+          "roles": [],
+          "channels": {}
+        }`;
+
+    content = content.replace(
+      '"guilds": {\n        // Example guild configuration',
+      `"guilds": {\n        ${guildConfig},\n        // Example guild configuration`
+    );
+  }
+
+  await fs.writeFile(configPath, content, 'utf-8');
+}
+
+/**
+ * Setup OpenClaw CLI configuration (if available)
+ */
+export async function setupOpenClawConfig(token: string): Promise<{ success: boolean; message: string }> {
+  const { execSync } = await import('child_process');
+
+  try {
+    // Check if openclaw is installed
+    execSync('which openclaw', { stdio: 'ignore' });
+  } catch {
+    return { success: false, message: 'OpenClaw CLI not installed. Run: npm install -g openclaw' };
+  }
+
+  try {
+    // Set Discord token
+    execSync(`openclaw config set channels.discord.token '"${token}"' --json`, { stdio: 'ignore' });
+
+    // Enable Discord channel
+    execSync('openclaw config set channels.discord.enabled true --json', { stdio: 'ignore' });
+
+    return { success: true, message: 'OpenClaw configured successfully!' };
+  } catch (error: any) {
+    return { success: false, message: `Failed to configure OpenClaw: ${error.message}` };
+  }
+}
+
 // ============================================================================
 // OpenClaw Skills Conversion (Commands → Skills)
 // ============================================================================

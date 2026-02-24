@@ -156,3 +156,58 @@ export async function promptUpdateConfirm(updates: { toUpdate: string[]; skipped
   console.log('');
   return promptConfirm('Apply these updates?', true);
 }
+
+export interface DiscordConfig {
+  token: string;
+  guildId?: string;
+  autoSetup: boolean;
+}
+
+export async function promptDiscordSetup(): Promise<DiscordConfig> {
+  console.log('');
+  console.log(pc.cyan('━━━ Discord Bot Setup ━━━'));
+  console.log(pc.gray('Get your bot token from: https://discord.com/developers/applications'));
+  console.log('');
+
+  const token = await p.password({
+    message: 'Discord Bot Token:',
+    mask: '*',
+    validate: (value) => {
+      if (!value || !value.trim()) return 'Bot token is required';
+      if (value.length < 50) return 'Invalid token format';
+    }
+  });
+  if (p.isCancel(token)) process.exit(0);
+
+  const hasGuild = await p.confirm({
+    message: 'Do you have a Discord Server ID to configure?',
+    initialValue: false
+  });
+  if (p.isCancel(hasGuild)) process.exit(0);
+
+  let guildId: string | undefined;
+  if (hasGuild) {
+    const guild = await p.text({
+      message: 'Discord Server ID:',
+      placeholder: '123456789012345678',
+      validate: (value) => {
+        if (!value || !value.trim()) return 'Server ID is required';
+        if (!/^\d{17,20}$/.test(String(value))) return 'Invalid Server ID format (should be 17-20 digits)';
+      }
+    });
+    if (p.isCancel(guild)) process.exit(0);
+    guildId = guild as string;
+  }
+
+  const autoSetup = await p.confirm({
+    message: 'Auto-setup OpenClaw config? (requires openclaw CLI)',
+    initialValue: true
+  });
+  if (p.isCancel(autoSetup)) process.exit(0);
+
+  return {
+    token: token as string,
+    guildId,
+    autoSetup: autoSetup as boolean
+  };
+}
