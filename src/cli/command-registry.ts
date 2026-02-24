@@ -118,6 +118,7 @@ export function registerCommands(cli: CAC): void {
     .command('update-cli', 'Update the CLI itself to latest version')
     .option('--check', 'Check for updates without installing')
     .option('--version <version>', 'Update to specific version')
+    .option('-f, --force', 'Force reinstall even if already up to date')
     .action(async (options: Record<string, any>) => {
       const { updateCliCommand } = await import('../commands/update-cli.js');
       await updateCliCommand(options);

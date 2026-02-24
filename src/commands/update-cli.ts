@@ -34,8 +34,9 @@ export async function updateCliCommand(options: Record<string, any>): Promise<vo
     console.log(`\n  Current: ${pc.gray(current)}`);
     console.log(`  Latest:  ${pc.green(latest)}`);
 
-    if (current === latest && !options.version) {
+    if (current === latest && !options.version && !options.force) {
       console.log(pc.green('\nAlready up to date!'));
+      console.log(pc.gray('Use --force to reinstall anyway.'));
       return;
     }
 
