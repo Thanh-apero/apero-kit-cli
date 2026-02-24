@@ -27,15 +27,19 @@ function parseFrontmatter(content: string): { description: string; argumentHint:
 }
 
 /**
- * Escape TOML string (handle quotes and special characters)
+ * Escape TOML basic string (single line)
  */
-function escapeTomlString(str: string): string {
-  // For multiline strings with complex content, use literal strings
-  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+function escapeTomlBasicString(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t');
 }
 
 /**
  * Convert Claude MD command to Gemini TOML format
+ * Uses literal strings (''') for prompts to avoid escape issues
  */
 export function convertMdToToml(mdContent: string): string {
   const { description, body } = parseFrontmatter(mdContent);
@@ -46,11 +50,13 @@ export function convertMdToToml(mdContent: string): string {
   const lines: string[] = [];
 
   if (description) {
-    lines.push(`description = "${escapeTomlString(description)}"`);
+    // Use basic string for short description (escape special chars)
+    lines.push(`description = "${escapeTomlBasicString(description)}"`);
   }
 
-  // Use triple-quoted string for multiline prompts
-  lines.push(`prompt = """\n${prompt}\n"""`);
+  // Use multi-line LITERAL strings (''') for prompt - no escape processing
+  // This avoids issues with backslashes in shell commands
+  lines.push(`prompt = '''\n${prompt}\n'''`);
 
   return lines.join('\n');
 }
@@ -454,6 +460,7 @@ function listAvailableRecursive(dir: string, base: string = ''): string[] {
 /**
  * Convert Claude agent MD to Gemini-compatible format
  * Maps Claude model names to Gemini equivalents
+ * Converts tools from string to array format
  */
 function convertAgentForGemini(mdContent: string): string {
   // Parse frontmatter
@@ -481,6 +488,12 @@ function convertAgentForGemini(mdContent: string): string {
       frontmatter = frontmatter.replace(regex, '');
     }
   }
+
+  // Remove tools field - Claude and Gemini have different tool naming
+  // Claude: "Glob, Grep, Read, Bash"
+  // Gemini: "read_file, grep_search, run_shell_command, write_file"
+  // Let Gemini use default tools instead of trying to map
+  frontmatter = frontmatter.replace(/^tools:\s*.+$/m, '');
 
   // Add kind: local if not present
   if (!frontmatter.includes('kind:')) {
@@ -676,4 +689,590 @@ export async function copyUnchangedOnly(
   }
 
   return { copied, skipped };
+}
+
+// ============================================================================
+// Discord/Clawbot Support
+// ============================================================================
+
+/**
+ * Convert Claude MD command to Discord/Clawbot JSON5 format
+ * Commands become agent "commands" config in Clawbot
+ */
+function convertCommandForDiscord(mdContent: string, commandName: string): {
+  name: string;
+  description: string;
+  prompt: string;
+} {
+  const { description, body } = parseFrontmatter(mdContent);
+
+  // Convert $ARGUMENTS to {{args}} for consistency
+  const prompt = body.replace(/\$ARGUMENTS/g, '{{args}}');
+
+  return {
+    name: commandName,
+    description: description || `Execute ${commandName} command`,
+    prompt
+  };
+}
+
+/**
+ * Convert Claude agent MD to Discord/Clawbot-compatible format
+ * Clawbot agents use similar YAML frontmatter but different model names
+ */
+function convertAgentForDiscord(mdContent: string): string {
+  // Parse frontmatter
+  const frontmatterMatch = mdContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!frontmatterMatch) return mdContent;
+
+  let frontmatter = frontmatterMatch[1];
+  const body = frontmatterMatch[2];
+
+  // Map Claude models to Clawbot models (uses Claude API via OpenClaw)
+  // Clawbot supports: claude-3-opus, claude-3-sonnet, claude-3-haiku
+  const modelMap: Record<string, string> = {
+    'opus': 'claude-3-opus',
+    'sonnet': 'claude-3-sonnet',
+    'haiku': 'claude-3-haiku',
+    'inherit': '' // Remove inherit
+  };
+
+  // Replace model field
+  for (const [claudeModel, discordModel] of Object.entries(modelMap)) {
+    const regex = new RegExp(`^model:\\s*${claudeModel}\\s*$`, 'm');
+    if (discordModel) {
+      frontmatter = frontmatter.replace(regex, `model: ${discordModel}`);
+    } else {
+      frontmatter = frontmatter.replace(regex, '');
+    }
+  }
+
+  // Remove tools field - Clawbot has different tool naming
+  frontmatter = frontmatter.replace(/^tools:\s*.+$/m, '');
+
+  // Add kind: local if not present
+  if (!frontmatter.includes('kind:')) {
+    frontmatter = frontmatter.trim() + '\nkind: local';
+  }
+
+  return `---\n${frontmatter.trim()}\n---\n${body}`;
+}
+
+/**
+ * Copy agents to Discord target (converts Claude agent format)
+ */
+export async function copyAgentsForDiscord(
+  items: string[] | 'all',
+  sourceDir: string,
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<CopyResult> {
+  const typeDir = join(sourceDir, 'agents');
+  const destTypeDir = join(destDir, 'agents');
+
+  if (!fs.existsSync(typeDir)) {
+    return { copied: [], skipped: [], errors: [] };
+  }
+
+  await fs.ensureDir(destTypeDir);
+
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const errors: Array<{ item: string; error: string }> = [];
+
+  // Get agent files
+  let agentList: string[];
+  if (items === 'all') {
+    const entries = fs.readdirSync(typeDir);
+    agentList = entries
+      .filter(e => e.endsWith('.md') && e !== 'README.md')
+      .map(e => e.replace(/\.md$/, ''));
+  } else {
+    agentList = items;
+  }
+
+  for (const agent of agentList) {
+    try {
+      const srcPath = join(typeDir, agent + '.md');
+
+      if (!fs.existsSync(srcPath)) {
+        skipped.push(agent);
+        continue;
+      }
+
+      const destPath = join(destTypeDir, agent + '.md');
+
+      if (mergeMode && fs.existsSync(destPath)) {
+        skipped.push(agent);
+        continue;
+      }
+
+      const mdContent = fs.readFileSync(srcPath, 'utf-8');
+      const convertedContent = convertAgentForDiscord(mdContent);
+      await fs.writeFile(destPath, convertedContent, 'utf-8');
+      copied.push(agent);
+    } catch (err: any) {
+      errors.push({ item: agent, error: err.message });
+    }
+  }
+
+  return { copied, skipped, errors };
+}
+
+/**
+ * Copy commands to Discord target
+ * Commands are stored as .md files but also generate a commands.json5 for Clawbot
+ */
+export async function copyCommandsForDiscord(
+  items: string[] | 'all',
+  sourceDir: string,
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<CopyResult> {
+  const typeDir = join(sourceDir, 'commands');
+  const destTypeDir = join(destDir, 'commands');
+
+  if (!fs.existsSync(typeDir)) {
+    return { copied: [], skipped: [], errors: [] };
+  }
+
+  await fs.ensureDir(destTypeDir);
+
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const errors: Array<{ item: string; error: string }> = [];
+
+  // Collect commands for JSON5 config
+  const commandsConfig: Record<string, { description: string; prompt: string }> = {};
+
+  // Get all items if 'all'
+  let itemList: string[];
+  if (items === 'all') {
+    const entries = fs.readdirSync(typeDir);
+    itemList = entries.map(e => e.replace(/\.md$/, ''));
+    itemList = [...new Set(itemList)];
+  } else {
+    itemList = items;
+  }
+
+  for (const item of itemList) {
+    try {
+      const srcPathMd = join(typeDir, item + '.md');
+      const srcPathDir = join(typeDir, item);
+
+      let copiedSomething = false;
+
+      // Handle .md file
+      if (fs.existsSync(srcPathMd) && fs.statSync(srcPathMd).isFile()) {
+        const destPath = join(destTypeDir, item + '.md');
+
+        if (!(mergeMode && fs.existsSync(destPath))) {
+          await fs.ensureDir(dirname(destPath));
+          const mdContent = fs.readFileSync(srcPathMd, 'utf-8');
+
+          // Copy MD as-is (Clawbot can read MD prompts)
+          await fs.copy(srcPathMd, destPath, { overwrite: !mergeMode });
+
+          // Also add to commands config
+          const cmd = convertCommandForDiscord(mdContent, item);
+          commandsConfig[item] = {
+            description: cmd.description,
+            prompt: cmd.prompt
+          };
+
+          copiedSomething = true;
+        }
+      }
+
+      // Handle directory (nested commands)
+      if (fs.existsSync(srcPathDir) && fs.statSync(srcPathDir).isDirectory()) {
+        await copyDirectoryForDiscord(srcPathDir, join(destTypeDir, item), mergeMode, commandsConfig, item);
+        copiedSomething = true;
+      }
+
+      if (copiedSomething) {
+        copied.push(item);
+      } else {
+        skipped.push(item);
+      }
+    } catch (err: any) {
+      errors.push({ item, error: err.message });
+    }
+  }
+
+  // Write commands.json5 config file for Clawbot
+  const configPath = join(destDir, 'commands.json5');
+  if (Object.keys(commandsConfig).length > 0 && !(mergeMode && fs.existsSync(configPath))) {
+    const json5Content = generateCommandsJson5(commandsConfig);
+    await fs.writeFile(configPath, json5Content, 'utf-8');
+  }
+
+  return { copied, skipped, errors };
+}
+
+/**
+ * Recursively copy directory for Discord
+ */
+async function copyDirectoryForDiscord(
+  srcDir: string,
+  destDir: string,
+  mergeMode: boolean,
+  commandsConfig: Record<string, { description: string; prompt: string }>,
+  parentName: string
+): Promise<void> {
+  await fs.ensureDir(destDir);
+
+  const entries = fs.readdirSync(srcDir);
+
+  for (const entry of entries) {
+    const srcPath = join(srcDir, entry);
+    const stat = fs.statSync(srcPath);
+
+    if (stat.isDirectory()) {
+      await copyDirectoryForDiscord(
+        srcPath,
+        join(destDir, entry),
+        mergeMode,
+        commandsConfig,
+        `${parentName}/${entry}`
+      );
+    } else if (entry.endsWith('.md')) {
+      const destPath = join(destDir, entry);
+
+      if (mergeMode && fs.existsSync(destPath)) {
+        continue;
+      }
+
+      const mdContent = fs.readFileSync(srcPath, 'utf-8');
+      await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+
+      // Add nested command to config
+      const cmdName = `${parentName}/${entry.replace(/\.md$/, '')}`;
+      const cmd = convertCommandForDiscord(mdContent, cmdName);
+      commandsConfig[cmdName] = {
+        description: cmd.description,
+        prompt: cmd.prompt
+      };
+    } else {
+      // Copy non-MD files as-is
+      const destPath = join(destDir, entry);
+      if (mergeMode && fs.existsSync(destPath)) {
+        continue;
+      }
+      await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+    }
+  }
+}
+
+/**
+ * Generate JSON5 config for Clawbot commands
+ */
+function generateCommandsJson5(
+  commands: Record<string, { description: string; prompt: string }>
+): string {
+  const lines: string[] = [
+    '// Clawbot Commands Configuration',
+    '// Generated by Apero Kit CLI',
+    '// These commands can be used as slash commands in Discord',
+    '{',
+    '  "commands": {'
+  ];
+
+  const cmdEntries = Object.entries(commands);
+  cmdEntries.forEach(([name, cmd], index) => {
+    const safeName = name.replace(/\//g, ':'); // plan/fast -> plan:fast
+    const isLast = index === cmdEntries.length - 1;
+
+    lines.push(`    "${safeName}": {`);
+    lines.push(`      "description": ${JSON.stringify(cmd.description)},`);
+    // Use multi-line string for prompt
+    lines.push(`      "prompt": ${JSON.stringify(cmd.prompt)}`);
+    lines.push(`    }${isLast ? '' : ','}`);
+  });
+
+  lines.push('  }');
+  lines.push('}');
+
+  return lines.join('\n');
+}
+
+/**
+ * Copy skills to Discord target (same SKILL.md format)
+ */
+export async function copySkillsForDiscord(
+  items: string[] | 'all',
+  sourceDir: string,
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<CopyResult> {
+  // Skills use same format, delegate to Gemini function
+  return copySkillsForGemini(items, sourceDir, destDir, mergeMode);
+}
+
+/**
+ * Copy Discord-specific base files (config.json5, etc.)
+ */
+export async function copyDiscordBaseFiles(
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<string[]> {
+  const discordTemplates = join(CLI_ROOT, 'templates', 'discord');
+  const copied: string[] = [];
+
+  // List of Discord-specific files to copy
+  const filesToCopy = ['config.json5', 'README.md'];
+
+  for (const file of filesToCopy) {
+    const srcPath = join(discordTemplates, file);
+    const destPath = join(destDir, file);
+
+    if (fs.existsSync(srcPath)) {
+      if (mergeMode && fs.existsSync(destPath)) {
+        continue;
+      }
+      await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+      copied.push(file);
+    }
+  }
+
+  return copied;
+}
+
+// ============================================================================
+// OpenClaw Skills Conversion (Commands → Skills)
+// ============================================================================
+
+/**
+ * Extract keywords from command content for trigger conditions
+ */
+function extractKeywords(content: string, commandName: string): string[] {
+  const keywords = new Set<string>();
+
+  // Add command name variations
+  keywords.add(commandName);
+  keywords.add(commandName.replace(/-/g, ' '));
+
+  // Extract from common patterns
+  const keywordPatterns = [
+    /keywords?:\s*([^\n]+)/gi,
+    /when.*(?:says?|mentions?|asks?).*["']([^"']+)["']/gi,
+    /trigger.*["']([^"']+)["']/gi
+  ];
+
+  for (const pattern of keywordPatterns) {
+    const matches = content.matchAll(pattern);
+    for (const match of matches) {
+      match[1].split(/[,;]/).forEach(k => keywords.add(k.trim().toLowerCase()));
+    }
+  }
+
+  // Common intent keywords based on command name
+  const intentMap: Record<string, string[]> = {
+    'plan': ['plan', 'design', 'architect', 'implement', 'create plan'],
+    'brainstorm': ['brainstorm', 'ideas', 'options', 'alternatives', 'think'],
+    'fix': ['fix', 'debug', 'error', 'broken', 'issue', 'bug'],
+    'code': ['code', 'implement', 'build', 'develop', 'write code'],
+    'review': ['review', 'check', 'audit', 'look at'],
+    'test': ['test', 'testing', 'spec', 'unit test'],
+    'cook': ['cook', 'implement', 'build feature', 'develop'],
+    'scout': ['scout', 'search', 'find', 'explore codebase'],
+    'debug': ['debug', 'trace', 'diagnose', 'investigate']
+  };
+
+  const baseName = commandName.split('/')[0].split(':')[0];
+  if (intentMap[baseName]) {
+    intentMap[baseName].forEach(k => keywords.add(k));
+  }
+
+  return Array.from(keywords).slice(0, 10);
+}
+
+/**
+ * Convert Claude command MD to OpenClaw SKILL.md format
+ */
+function convertCommandToSkill(mdContent: string, commandName: string): string {
+  const { description, argumentHint, body } = parseFrontmatter(mdContent);
+
+  // Convert $ARGUMENTS to {{args}}
+  const prompt = body.replace(/\$ARGUMENTS/g, '{{args}}');
+
+  // Extract keywords for trigger conditions
+  const keywords = extractKeywords(body, commandName);
+
+  // Build SKILL.md content
+  const skillContent = `---
+name: ${commandName.replace(/\//g, '-')}
+description: ${description || `Execute ${commandName} task`}
+user-invocable: true
+disable-model-invocation: false
+metadata: {"openclaw": {"always": true}}
+---
+
+# ${commandName.charAt(0).toUpperCase() + commandName.slice(1).replace(/-/g, ' ')}
+
+## Trigger Conditions
+
+Activate when user mentions:
+${keywords.map(k => `- "${k}"`).join('\n')}
+
+## Input
+${argumentHint ? `Expected input: ${argumentHint.replace('$ARGUMENTS', '{{args}}')}` : 'User provides task description in natural language.'}
+
+## Workflow
+
+${prompt}
+
+## Output Format
+
+Provide clear, actionable response based on the workflow above.
+`;
+
+  return skillContent;
+}
+
+/**
+ * Convert commands to OpenClaw skills format for Discord
+ */
+export async function convertCommandsToSkills(
+  items: string[] | 'all',
+  sourceDir: string,
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<CopyResult> {
+  const typeDir = join(sourceDir, 'commands');
+  const destTypeDir = join(destDir, 'skills');
+
+  if (!fs.existsSync(typeDir)) {
+    return { copied: [], skipped: [], errors: [] };
+  }
+
+  await fs.ensureDir(destTypeDir);
+
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const errors: Array<{ item: string; error: string }> = [];
+
+  // Get all items if 'all'
+  let itemList: string[];
+  if (items === 'all') {
+    const entries = fs.readdirSync(typeDir);
+    itemList = entries
+      .filter(e => e.endsWith('.md') && e !== 'README.md')
+      .map(e => e.replace(/\.md$/, ''));
+    // Also get directories (nested commands)
+    const dirs = entries.filter(e => {
+      const fullPath = join(typeDir, e);
+      return fs.statSync(fullPath).isDirectory();
+    });
+    itemList = [...new Set([...itemList, ...dirs])];
+  } else {
+    itemList = items;
+  }
+
+  for (const item of itemList) {
+    try {
+      const srcPathMd = join(typeDir, item + '.md');
+      const srcPathDir = join(typeDir, item);
+
+      // Handle .md file → skill directory
+      if (fs.existsSync(srcPathMd) && fs.statSync(srcPathMd).isFile()) {
+        const skillDir = join(destTypeDir, item.replace(/\//g, '-'));
+        const skillPath = join(skillDir, 'SKILL.md');
+
+        if (mergeMode && fs.existsSync(skillPath)) {
+          skipped.push(item);
+          continue;
+        }
+
+        await fs.ensureDir(skillDir);
+        const mdContent = fs.readFileSync(srcPathMd, 'utf-8');
+        const skillContent = convertCommandToSkill(mdContent, item);
+        await fs.writeFile(skillPath, skillContent, 'utf-8');
+        copied.push(item);
+      }
+
+      // Handle directory (nested commands) → nested skills
+      if (fs.existsSync(srcPathDir) && fs.statSync(srcPathDir).isDirectory()) {
+        await convertNestedCommandsToSkills(srcPathDir, destTypeDir, item, mergeMode);
+        copied.push(item + '/*');
+      }
+    } catch (err: any) {
+      errors.push({ item, error: err.message });
+    }
+  }
+
+  return { copied, skipped, errors };
+}
+
+/**
+ * Recursively convert nested commands to skills
+ */
+async function convertNestedCommandsToSkills(
+  srcDir: string,
+  destDir: string,
+  parentName: string,
+  mergeMode: boolean
+): Promise<void> {
+  const entries = fs.readdirSync(srcDir);
+
+  for (const entry of entries) {
+    const srcPath = join(srcDir, entry);
+    const stat = fs.statSync(srcPath);
+
+    if (stat.isDirectory()) {
+      await convertNestedCommandsToSkills(
+        srcPath,
+        destDir,
+        `${parentName}-${entry}`,
+        mergeMode
+      );
+    } else if (entry.endsWith('.md') && entry !== 'README.md') {
+      const skillName = `${parentName}-${entry.replace(/\.md$/, '')}`;
+      const skillDir = join(destDir, skillName);
+      const skillPath = join(skillDir, 'SKILL.md');
+
+      if (mergeMode && fs.existsSync(skillPath)) {
+        continue;
+      }
+
+      await fs.ensureDir(skillDir);
+      const mdContent = fs.readFileSync(srcPath, 'utf-8');
+      const skillContent = convertCommandToSkill(mdContent, skillName);
+      await fs.writeFile(skillPath, skillContent, 'utf-8');
+    }
+  }
+}
+
+/**
+ * Copy bundled skills (train-prompt, etc.) to Discord target
+ */
+export async function copyBundledSkillsForDiscord(
+  destDir: string,
+  mergeMode: boolean = false
+): Promise<string[]> {
+  const bundledSkillsDir = join(CLI_ROOT, 'templates', 'discord', 'skills');
+  const destSkillsDir = join(destDir, 'skills');
+  const copied: string[] = [];
+
+  if (!fs.existsSync(bundledSkillsDir)) {
+    return copied;
+  }
+
+  await fs.ensureDir(destSkillsDir);
+
+  const skills = fs.readdirSync(bundledSkillsDir);
+  for (const skill of skills) {
+    const srcPath = join(bundledSkillsDir, skill);
+    const destPath = join(destSkillsDir, skill);
+
+    if (fs.statSync(srcPath).isDirectory()) {
+      if (mergeMode && fs.existsSync(destPath)) {
+        continue;
+      }
+      await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+      copied.push(skill);
+    }
+  }
+
+  return copied;
 }

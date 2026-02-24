@@ -5,12 +5,13 @@ export function registerCommands(cli: CAC): void {
   cli
     .command('init [project-name]', 'Initialize a new project with an agent kit')
     .option('-k, --kit <type>', 'Kit type (engineer, researcher, designer, minimal, full, custom)')
-    .option('-t, --target <target>', 'Target CLI (claude, gemini or claude,gemini for both)')
+    .option('-t, --target <target>', 'Target CLI (claude, gemini, discord or combination)')
     .option('-s, --source <path>', 'Custom source path for templates')
     .option('-f, --force', 'Overwrite existing directory')
     .option('-g, --global', 'Install to global ~/.claude/ directory')
     .option('--fresh', 'Remove existing installation before re-init')
     .option('-y, --yes', 'Skip prompts, use defaults')
+    .option('-p, --password <code>', 'Access code for initialization')
     .option('--exclude <patterns>', 'Exclude components (comma-separated)')
     .option('--only <patterns>', 'Include only matching components (comma-separated)')
     .action(async (projectName: string | undefined, options: Record<string, any>) => {

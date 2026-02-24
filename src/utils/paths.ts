@@ -17,11 +17,12 @@ export const TEMPLATES_DIR = join(CLI_ROOT, 'templates');
 export const TARGETS: Record<string, string> = {
   claude: '.claude',
   gemini: '.gemini',
+  discord: '.discord',
   opencode: '.opencode',
   generic: '.agent'
 };
 
-export type CliTarget = 'claude' | 'gemini';
+export type CliTarget = 'claude' | 'gemini' | 'discord';
 
 export interface SourceInfo {
   path: string;

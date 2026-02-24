@@ -47,17 +47,19 @@ export async function promptTarget(): Promise<string> {
 }
 
 export async function promptCliTargets(): Promise<CliTarget[]> {
-  const targets = await p.multiselect({
-    message: 'Select AI CLI targets:',
+  const selection = await p.multiselect({
+    message: 'Select AI CLI target(s):',
     options: [
-      { value: 'claude', label: 'Claude Code', hint: '.claude/ - Markdown commands' },
-      { value: 'gemini', label: 'Gemini CLI', hint: '.gemini/ - TOML commands' }
+      { value: 'claude', label: 'Claude Code', hint: '.claude/' },
+      { value: 'gemini', label: 'Gemini CLI', hint: '.gemini/' },
+      { value: 'discord', label: 'Discord + Clawbot', hint: '.discord/' }
     ],
     initialValues: ['claude'],
     required: true
   });
-  if (p.isCancel(targets)) process.exit(0);
-  return targets as CliTarget[];
+  if (p.isCancel(selection)) process.exit(0);
+
+  return selection as CliTarget[];
 }
 
 export async function promptAgents(sourceDir: string): Promise<string[]> {
