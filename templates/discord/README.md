@@ -8,18 +8,50 @@ This directory contains configuration for running your AI agent on Discord via [
 - **Skills System** - Commands converted to skills format for better context
 - **Train Prompt** - Add new knowledge via URLs, files, or inline content
 - **Progressive Disclosure** - Skills load on-demand to save tokens
+- **Gemini CLI OAuth** - Use Google OAuth via Gemini CLI (no API key needed!)
 
 ## Quick Start
 
-### 1. Install OpenClaw CLI
+### 1. Install Required CLIs
 
 ```bash
+# Install OpenClaw CLI
 npm install -g openclaw
-# or
-npx openclaw
+
+# Install Gemini CLI (for OAuth authentication)
+npm install -g @anthropic-ai/gemini-cli
 ```
 
-### 2. Create Discord Bot
+### 2. Setup AI Model Authentication (Choose One)
+
+#### Option A: Gemini CLI OAuth (Recommended)
+
+No API key needed! Uses Google OAuth via Gemini CLI plugin.
+
+```bash
+# Login to Gemini CLI
+gemini auth login
+
+# Enable Gemini CLI auth plugin
+openclaw plugins enable google-gemini-cli-auth
+
+# Set as default model provider
+openclaw models auth login --provider google-gemini-cli --set-default
+```
+
+**Or use the start script:**
+```bash
+./start-bot.sh
+```
+
+#### Option B: API Key
+
+```bash
+# Set your API key
+openclaw config set models.anthropic.apiKey '"sk-your-api-key"' --json
+```
+
+### 3. Create Discord Bot
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click "New Application" and name your bot
@@ -29,7 +61,7 @@ npx openclaw
    - **Server Members Intent** (recommended)
 5. Click "Reset Token" to get your bot token
 
-### 3. Configure Bot Token
+### 4. Configure Bot Token
 
 **Option A: Environment Variable (Recommended)**
 ```bash
@@ -41,15 +73,19 @@ export DISCORD_BOT_TOKEN="your-bot-token-here"
 openclaw config set channels.discord.token '"your-bot-token-here"' --json
 ```
 
-### 4. Enable Discord Channel
+### 5. Enable Discord Channel
 
 ```bash
 openclaw config set channels.discord.enabled true --json
 ```
 
-### 5. Start Gateway
+### 6. Start Gateway
 
 ```bash
+# Using start script (handles Gemini CLI auth automatically)
+./start-bot.sh
+
+# Or directly
 openclaw gateway
 ```
 
@@ -218,6 +254,17 @@ Our deployment process:
 - Check `skills/` directory exists
 - Verify SKILL.md files have correct frontmatter
 - Run `openclaw skills list` to see active skills
+
+**Gemini CLI OAuth issues?**
+- Re-login: `gemini auth login`
+- Check plugin status: `openclaw plugins list`
+- Re-enable plugin: `openclaw plugins enable google-gemini-cli-auth`
+- Check auth status: `openclaw models auth status --provider google-gemini-cli`
+- Set as default again: `openclaw models auth login --provider google-gemini-cli --set-default`
+
+**Token expired?**
+- Gemini CLI OAuth tokens auto-refresh
+- If issues persist, run `gemini auth login` again
 
 ## Resources
 

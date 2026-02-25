@@ -163,6 +163,7 @@ export interface DiscordConfig {
   autoSetup: boolean;
   openclawInstalled: boolean;
   restartOnly?: boolean;
+  useGeminiCli?: boolean;
 }
 
 function isOpenClawInstalled(): boolean {
@@ -171,6 +172,71 @@ function isOpenClawInstalled(): boolean {
     execSync('which openclaw', { stdio: 'ignore' });
     return true;
   } catch {
+    return false;
+  }
+}
+
+function isGeminiCliInstalled(): boolean {
+  try {
+    const { execSync } = require('child_process');
+    execSync('which gemini', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isGeminiCliLoggedIn(): boolean {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const credsPath = path.join(process.env.HOME || '', '.gemini', 'oauth_creds.json');
+    return fs.existsSync(credsPath);
+  } catch {
+    return false;
+  }
+}
+
+async function setupGeminiCliAuth(): Promise<boolean> {
+  const { execSync, spawnSync } = require('child_process');
+  try {
+    // Login to Gemini CLI if needed
+    if (!isGeminiCliLoggedIn()) {
+      console.log(pc.cyan('Logging in to Gemini CLI...'));
+      spawnSync('gemini', ['auth', 'login'], { stdio: 'inherit' });
+    }
+
+    // Enable plugin and set as default
+    console.log(pc.cyan('Enabling Gemini CLI auth plugin...'));
+    execSync('openclaw plugins enable google-gemini-cli-auth', { stdio: 'ignore' });
+
+    console.log(pc.cyan('Setting Gemini CLI as default model provider...'));
+    execSync('openclaw models auth login --provider google-gemini-cli --set-default', { stdio: 'inherit' });
+
+    console.log(pc.green('✓ Gemini CLI OAuth configured successfully!'));
+    return true;
+  } catch (error) {
+    console.log(pc.red('✗ Failed to setup Gemini CLI auth'));
+    console.log(pc.gray('  Try manually:'));
+    console.log(pc.gray('    1. gemini auth login'));
+    console.log(pc.gray('    2. openclaw plugins enable google-gemini-cli-auth'));
+    console.log(pc.gray('    3. openclaw models auth login --provider google-gemini-cli --set-default'));
+    return false;
+  }
+}
+
+async function installGeminiCli(): Promise<boolean> {
+  const { execSync } = require('child_process');
+  try {
+    console.log(pc.cyan('Installing Gemini CLI...'));
+    execSync('npm install -g @anthropic-ai/gemini-cli', { stdio: 'inherit' });
+    console.log(pc.green('✓ Gemini CLI installed successfully!'));
+    console.log('');
+    return true;
+  } catch (error) {
+    console.log(pc.red('✗ Failed to install Gemini CLI'));
+    console.log(pc.gray('  Try manually: npm install -g @anthropic-ai/gemini-cli'));
+    console.log('');
     return false;
   }
 }
@@ -244,6 +310,7 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
       message: 'What do you want to do?',
       options: [
         { value: 'restart', label: 'Restart gateway', hint: 'Use existing config' },
+        { value: 'gemini-cli', label: 'Setup Gemini CLI OAuth', hint: 'Use Gemini CLI as AI provider' },
         { value: 'reconfigure', label: 'Reconfigure', hint: 'Enter new token' },
         { value: 'skip', label: 'Skip setup', hint: 'Continue without changes' }
       ]
@@ -260,6 +327,34 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
       };
     }
 
+    if (action === 'gemini-cli') {
+      // Setup Gemini CLI OAuth
+      let geminiInstalled = isGeminiCliInstalled();
+      if (!geminiInstalled) {
+        console.log(pc.yellow('⚠ Gemini CLI not found.'));
+        const shouldInstall = await p.confirm({
+          message: 'Install Gemini CLI now?',
+          initialValue: true
+        });
+        if (p.isCancel(shouldInstall)) process.exit(0);
+        if (shouldInstall) {
+          geminiInstalled = await installGeminiCli();
+        }
+      }
+
+      if (geminiInstalled) {
+        await setupGeminiCliAuth();
+      }
+
+      return {
+        token: '',
+        autoSetup: false,
+        openclawInstalled: true,
+        restartOnly: true,
+        useGeminiCli: true
+      };
+    }
+
     if (action === 'skip') {
       return {
         token: '',
@@ -270,7 +365,42 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
     }
   }
 
-  console.log(pc.gray('Get your bot token from: https://discord.com/developers/applications'));
+  // Ask for authentication method
+  console.log('');
+  console.log(pc.cyan('Choose AI Model Authentication:'));
+  const authMethod = await p.select({
+    message: 'How do you want to authenticate with AI models?',
+    options: [
+      { value: 'gemini-cli', label: 'Gemini CLI OAuth', hint: 'Recommended - uses Google OAuth via Gemini CLI' },
+      { value: 'api-key', label: 'API Key', hint: 'Use your own API key' }
+    ]
+  });
+  if (p.isCancel(authMethod)) process.exit(0);
+
+  let useGeminiCli = false;
+  if (authMethod === 'gemini-cli') {
+    // Setup Gemini CLI
+    let geminiInstalled = isGeminiCliInstalled();
+    if (!geminiInstalled) {
+      console.log(pc.yellow('⚠ Gemini CLI not found.'));
+      const shouldInstall = await p.confirm({
+        message: 'Install Gemini CLI now?',
+        initialValue: true
+      });
+      if (p.isCancel(shouldInstall)) process.exit(0);
+      if (shouldInstall) {
+        geminiInstalled = await installGeminiCli();
+      }
+    }
+
+    if (geminiInstalled && openclawInstalled) {
+      const setupSuccess = await setupGeminiCliAuth();
+      useGeminiCli = setupSuccess;
+    }
+  }
+
+  console.log('');
+  console.log(pc.gray('Get your Discord bot token from: https://discord.com/developers/applications'));
   console.log('');
 
   const token = await p.password({
@@ -303,21 +433,24 @@ export async function promptDiscordSetup(): Promise<DiscordConfig> {
     guildId = guild as string;
   }
 
-  // Only ask for auto-setup if openclaw is installed
+  // Only ask for auto-setup if openclaw is installed and not using Gemini CLI
   let autoSetup = false;
-  if (openclawInstalled) {
+  if (openclawInstalled && !useGeminiCli) {
     const shouldAutoSetup = await p.confirm({
       message: 'Auto-setup OpenClaw config?',
       initialValue: true
     });
     if (p.isCancel(shouldAutoSetup)) process.exit(0);
     autoSetup = shouldAutoSetup as boolean;
+  } else if (useGeminiCli) {
+    autoSetup = true; // Already configured via Gemini CLI
   }
 
   return {
     token: token as string,
     guildId,
     autoSetup,
-    openclawInstalled
+    openclawInstalled,
+    useGeminiCli
   };
 }
