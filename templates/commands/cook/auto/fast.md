@@ -22,5 +22,5 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 ## Workflow:
 
 - **Scout**: Use `scout` subagent to find related resources, documents, and code snippets in the current codebase.
-- **Plan**: Trigger slash command `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on the reports from `scout` subagent.
+- **Plan**: Trigger slash command `/plan --fast <detailed-instruction-prompt>` to create an implementation plan based on the reports from `scout` subagent.
 - **Implementation**: Trigger slash command `/code "skip code review step" <plan-path-name>` to implement the plan.

@@ -21,6 +21,8 @@ argument-hint: [plan] [all-phases-yes-or-no] (default: yes)
 - Sacrifice grammar for the sake of concision when writing reports.
 - In reports, list any unresolved questions at the end, if any.
 - Ensure token efficiency while maintaining high quality.
+- DO NOT stop until you finish all phases.
+- If this is a frontend project, use any of these available skills/tools to verify the implementation: `chrome`, `chrome-devtools`
 
 ---
 
@@ -92,15 +94,45 @@ Mark Step 3 complete in `TodoWrite`, mark Step 4 in_progress.
 
 ---
 
-## Step 4: Code Review
+## Step 4: Code Review (Smart Auto-Handling)
 
-Call `code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY". If critical issues found: **STOP**, fix all, re-run `tester` to verify, re-run `code-reviewer`. Repeat until no critical issues.
+Call `code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
+
+**Auto-Handling Logic (max 3 cycles):**
+
+```
+cycle = 0
+LOOP:
+  1. Run code-reviewer → get score, critical_count, warnings, suggestions
+  2. LOG findings: "Review: [score]/10 | Critical: [N] | Warnings: [N] | Suggestions: [N]"
+  3. IF score >= 9.5 AND critical_count == 0:
+     → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
+     → PROCEED to Step 5
+  4. ELSE IF critical_count > 0 AND cycle < 3:
+     → Output: "⚙ Step 4: Auto-fixing [critical_count] critical issues (cycle [cycle+1]/3)"
+     → Implement fixes for critical issues
+     → Re-run tester to verify no regressions
+     → cycle++, GOTO LOOP
+  5. ELSE IF critical_count > 0 AND cycle >= 3:
+     → ESCALATE TO USER (auto-fix exhausted)
+     → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
+     → Use AskUserQuestion:
+       - "Fix remaining issues manually" → implement, restart cycle counter
+       - "Approve with noted issues" → proceed with warnings
+       - "Abort workflow" → stop
+  6. ELSE (no critical, but score < 9.5):
+     → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"
+     → PROCEED to Step 5
+```
 
 **Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
 
-**Output:** `✓ Step 4: Code reviewed - [0] critical issues`
+**Output formats:**
+- Auto-approved: `✓ Step 4: Code reviewed - 9.8/10 - Auto-approved (2 warnings logged)`
+- After auto-fix: `✓ Step 4: Code reviewed - 7.2/10 → Auto-fixed 2 critical → 9.5/10 - Approved`
+- Escalation: `⚠ Step 4: 3 fix cycles exhausted, [N] critical remain - User input required`
 
-**Validation:** If critical issues > 0, Step 4 INCOMPLETE - do not proceed.
+**Validation:** Step 4 INCOMPLETE if critical issues > 0 AND user hasn't approved.
 
 Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 
@@ -118,7 +150,7 @@ Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 3. **AUTO-COMMIT (after steps 1 and 2 completes):**
 - **Call** `git-manager` subagent to handle git operation.
 - Run only if: Steps 1 and 2 successful + Tests passed
-- Auto-stage, commit with message [phase - plan] and push
+- Auto-stage, commit with conventional commit message based on actual changes
 
 **Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met.
 
@@ -164,7 +196,8 @@ Use `AskUserQuestion` tool to ask these questions:
 
 **REMEMBER:**
 - Do not skip steps. Do not proceed if validation fails.
-- One plan phase per command run. Command focuses on single plan phase only.
+- One plan phase at a time. Do not proceed to the next phase until the current phase is complete and validated.
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.
 - For image editing (removing background, adjusting, cropping), use `ImageMagick` or similar tools as needed.
+- If this is a frontend project, use any of these available skills/tools to verify the implementation: `chrome`, `chrome-devtools`.

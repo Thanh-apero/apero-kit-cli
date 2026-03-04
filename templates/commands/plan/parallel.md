@@ -7,13 +7,11 @@ Think strategically about parallelization.
 Activate `planning` skill.
 
 ## Your mission
-
 <task>
 $ARGUMENTS
 </task>
 
 ## Workflow
-
 1. Create a directory using naming pattern from `## Naming` section in injected context.
    Make sure you pass the directory path to every subagent during the process.
 2. Follow strictly to the "Plan Creation & Organization" rules of `planning` skill.
@@ -30,11 +28,11 @@ After plan creation, offer validation interview to confirm decisions before impl
 
 **Check `## Plan Context` → `Validation: mode=X, questions=MIN-MAX`:**
 
-| Mode     | Behavior                                                                        |
-| -------- | ------------------------------------------------------------------------------- |
+| Mode | Behavior |
+|------|----------|
 | `prompt` | Ask user: "Validate this plan with a brief interview?" → Yes (Recommended) / No |
-| `auto`   | Automatically execute `/plan:validate {plan-path}`                              |
-| `off`    | Skip validation step entirely                                                   |
+| `auto` | Automatically execute `/plan:validate {plan-path}` |
+| `off` | Skip validation step entirely |
 
 **If mode is `prompt`:** Use `AskUserQuestion` tool with options above.
 **If user chooses validation or mode is `auto`:** Execute `/plan:validate {plan-path}` SlashCommand.
@@ -42,7 +40,6 @@ After plan creation, offer validation interview to confirm decisions before impl
 ## Special Requirements for Parallel Execution
 
 **CRITICAL:** The planner subagent must create phases that:
-
 1. **Can be executed independently** - Each phase should be self-contained with no runtime dependencies on other phases
 2. **Have clear boundaries** - No file overlap between phases (each file should only be modified in ONE phase)
 3. **Separate concerns logically** - Group by architectural layer, feature domain, or technology stack
@@ -50,7 +47,6 @@ After plan creation, offer validation interview to confirm decisions before impl
 5. **Include dependency matrix** - Clearly document which phases must run sequentially vs in parallel
 
 **Parallelization Strategy:**
-
 - Group frontend/backend/database work into separate phases when possible
 - Separate infrastructure setup from application logic
 - Isolate different feature domains (e.g., auth vs profile vs payments)
@@ -58,7 +54,6 @@ After plan creation, offer validation interview to confirm decisions before impl
 - Create independent test phases per module
 
 **Phase Organization Example:**
-
 ```
 Phase 01: Database Schema (can run independently)
 Phase 02: Backend API Layer (can run independently)
@@ -69,7 +64,6 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
 ## Output Requirements
 
 **Plan Directory Structure** (use `Plan dir:` from `## Naming` section)
-
 ```
 {plan-dir}/
 ├── research/
@@ -87,13 +81,10 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
 ```
 
 **Research Output Requirements**
-
 - Ensure every research markdown report remains concise (≤150 lines) while covering all requested topics and citations.
 
 **Plan File Specification**
-
 - Every `plan.md` MUST start with YAML frontmatter:
-
   ```yaml
   ---
   title: "{Brief title}"
@@ -106,7 +97,6 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
   created: {YYYY-MM-DD}
   ---
   ```
-
 - Save the overview access point at `{plan-dir}/plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status, progress, parallelization group, and links to phase files.
 - For each phase, create `{plan-dir}/phase-XX-phase-name-here.md` containing the following sections in order:
   - Context links (reference parent plan, dependencies, docs)
@@ -126,27 +116,30 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
   - Next steps
 
 **Main plan.md must include:**
-
 - Dependency graph showing which phases can run in parallel
 - Execution strategy (e.g., "Phases 1-3 parallel, then Phase 4")
 - File ownership matrix (which phase owns which files)
 
-## Post-Plan Preview (Optional)
+## Context Reminder (MANDATORY)
 
-After plan creation, offer to open in browser for easier reading.
+**IMPORTANT:** After plan creation, you MUST remind the user with the **full absolute path**:
 
-Use `AskUserQuestion` tool:
-- "Open plan in browser for easier reading?" → Yes (Recommended) / No
+> **Best Practice:** Run `/clear` before implementing to start with fresh context.
+> Then run:
+> ```
+> /cook --parallel {ABSOLUTE_PATH_TO_PLAN_DIR}/plan.md
+> ```
+> *(Replace with actual absolute path, e.g., `/home/user/project/plans/260203-1234-feature/plan.md`)*
 
-**If user chooses Yes:** Run `/plan:preview {plan-path}` SlashCommand.
+**Why `--parallel`?** Parallel-optimized plan pairs with parallel execution - multiple agents work on independent phases.
+**Why absolute path?** After `/clear`, the new session loses context. Worktree paths won't be discoverable without the full path.
+
+This reminder is **NON-NEGOTIABLE** - always output it after presenting the plan with the actual absolute path.
 
 ## Important Notes
-
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
 **IMPORTANT:** Ensure token efficiency while maintaining high quality.
 **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **IMPORTANT:** Do not start implementing.
 **IMPORTANT:** Each phase MUST have exclusive file ownership - no file can be modified by multiple phases.
-
-ultrathink

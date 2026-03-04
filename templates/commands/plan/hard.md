@@ -36,23 +36,30 @@ After plan creation, offer validation interview to confirm decisions before impl
 
 **Check `## Plan Context` → `Validation: mode=X, questions=MIN-MAX`:**
 
-| Mode     | Behavior                                                                        |
-| -------- | ------------------------------------------------------------------------------- |
+| Mode | Behavior |
+|------|----------|
 | `prompt` | Ask user: "Validate this plan with a brief interview?" → Yes (Recommended) / No |
-| `auto`   | Automatically execute `/plan:validate {plan-path}`                              |
-| `off`    | Skip validation step entirely                                                   |
+| `auto` | Automatically execute `/plan:validate {plan-path}` |
+| `off` | Skip validation step entirely |
 
 **If mode is `prompt`:** Use `AskUserQuestion` tool with options above.
 **If user chooses validation or mode is `auto`:** Execute `/plan:validate {plan-path}` SlashCommand.
 
-## Post-Plan Preview (Optional)
+## Context Reminder (MANDATORY)
 
-After plan creation, offer to open in browser for easier reading.
+**IMPORTANT:** If user skips validation (chooses "No" or mode is `off`), you MUST remind them with the **full absolute path**:
 
-Use `AskUserQuestion` tool:
-- "Open plan in browser for easier reading?" → Yes (Recommended) / No
+> **Best Practice:** Run `/clear` before implementing to start with fresh context.
+> Then run:
+> ```
+> /cook {ABSOLUTE_PATH_TO_PLAN_DIR}/plan.md
+> ```
+> *(Replace with actual absolute path, e.g., `/home/user/project/plans/260203-1234-feature/plan.md`)*
 
-**If user chooses Yes:** Run `/plan:preview {plan-path}` SlashCommand.
+**Why no flag?** Thorough planning without validation needs interactive review gates.
+**Why absolute path?** After `/clear`, the new session loses context. Worktree paths won't be discoverable without the full path.
+
+This reminder is **NON-NEGOTIABLE** when validation is skipped - always output with the actual absolute path.
 
 ## Output Requirements
 
@@ -99,5 +106,3 @@ Use `AskUserQuestion` tool:
 **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **IMPORTANT**: **Do not** start implementing.
-
-ultrathink
