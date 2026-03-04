@@ -1,11 +1,11 @@
 {
-  "name": "apero-kit-cli",
-  "version": "2.4.8",
+  "name": "thanh-kit",
+  "version": "2.5.4",
   "description": "CLI tool to scaffold AI agent projects with pre-configured kits (Claude, OpenCode, Codex)",
   "type": "module",
   "bin": {
-    "ak": "bin/ak.js",
-    "apero-kit": "bin/ak.js"
+    "tk": "bin/ak.js",
+    "thanh-kit": "bin/ak.js"
   },
   "main": "dist/index.js",
   "exports": {
@@ -44,17 +44,17 @@
     "scaffold",
     "template",
     "llm",
-    "apero"
+    "thanh-kit"
   ],
-  "author": "Apero Team",
+  "author": "Thanh Nguyen",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Thanh-apero/apero-kit-cli.git"
+    "url": "git+https://github.com/Thanh-apero/thanh-kit.git"
   },
-  "homepage": "https://github.com/Thanh-apero/apero-kit-cli#readme",
+  "homepage": "https://github.com/Thanh-apero/thanh-kit#readme",
   "bugs": {
-    "url": "https://github.com/Thanh-apero/apero-kit-cli/issues"
+    "url": "https://github.com/Thanh-apero/thanh-kit/issues"
   },
   "engines": {
     "node": ">=18.0.0"
