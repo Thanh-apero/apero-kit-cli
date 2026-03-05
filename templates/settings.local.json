@@ -1,13 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(ls:*)",
-      "Bash(test:*)",
-      "Bash(chmod:*)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(test *)",
+      "Bash(chmod *)",
       "Bash(./install.sh)",
-      "Bash(.venv/bin/pip install:*)",
-      "Bash(grep:*)"
+      "Bash(.venv/bin/pip install *)",
+      "Bash(grep *)",
+      "Read(/.claude/**)",
+      "Edit(/.claude/**)",
+      "Write(/.claude/**)",
+      "Bash(node .claude/*)",
+      "Bash(python .claude/*)"
     ]
   }
 }
