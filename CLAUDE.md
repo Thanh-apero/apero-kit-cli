@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Apero Kit CLI (`ak`) — Node.js CLI tool that scaffolds AI agent projects with pre-configured kits (Claude Code, OpenCode, Codex). Copies template files (agents, skills, commands, workflows, hooks, router) into target directories with safe hash-based update tracking.
+Thanh Kit (`tk`) — Node.js CLI tool that scaffolds AI agent projects with pre-configured kits (Claude Code, OpenCode, Codex). Copies template files (agents, skills, commands, workflows, hooks, router) into target directories with safe hash-based update tracking.
 
 ## Commands
 
@@ -28,7 +28,7 @@ bin/ak.js → src/commands/{command}.js → src/utils/*.js → templates/
 
 **Commands** (`src/commands/`):
 - `init.js` — Scaffold project: resolve source → select kit → copy components → create `.ak/state.json`
-- `add.js` — Add single component (`ak add skill:databases`)
+- `add.js` — Add single component (`tk add skill:databases`)
 - `update.js` — Safe sync from source using MD5 hash comparison (skip locally modified files)
 - `list.js` — Display available kits/agents/skills/commands/workflows
 - `status.js` — Show project state and file modification status
@@ -56,6 +56,6 @@ bin/ak.js → src/commands/{command}.js → src/utils/*.js → templates/
 ## Conventions
 
 - Node.js >= 18, ES modules (`import`/`export`)
-- Binaries: `ak` and `apero-kit` (both point to `bin/ak.js`)
+- Binaries: `tk` and `thanh-kit` (both point to `bin/ak.js`)
 - State file: `.ak/state.json` per project
 - Key deps: commander, chalk, inquirer, ora, fs-extra

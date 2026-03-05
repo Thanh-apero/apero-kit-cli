@@ -15,7 +15,7 @@ function getCurrentVersion(): string {
 }
 
 function getLatestVersion(): string {
-  const output = execSync('npm view apero-kit-cli version', {
+  const output = execSync('npm view thanh-kit version', {
     encoding: 'utf-8',
     timeout: 15000,
     stdio: ['pipe', 'pipe', 'pipe']
@@ -41,15 +41,15 @@ export async function updateCliCommand(options: Record<string, any>): Promise<vo
     }
 
     if (options.check) {
-      console.log(pc.yellow('\nUpdate available! Run "ak update-cli" to install.'));
+      console.log(pc.yellow('\nUpdate available! Run "tk update-cli" to install.'));
       return;
     }
 
     // Install
     const target = options.version || 'latest';
-    const installSpinner = ora(`Installing apero-kit-cli@${target}...`).start();
+    const installSpinner = ora(`Installing thanh-kit@${target}...`).start();
 
-    execSync(`npm install -g apero-kit-cli@${target}`, {
+    execSync(`npm install -g thanh-kit@${target}`, {
       encoding: 'utf-8',
       timeout: 60000,
       stdio: ['pipe', 'pipe', 'pipe']
@@ -60,6 +60,6 @@ export async function updateCliCommand(options: Record<string, any>): Promise<vo
     spinner.stop();
     console.log(pc.red('\nUpdate failed.'));
     console.log(pc.gray(err.message));
-    console.log(pc.gray('\nTry manually: npm install -g apero-kit-cli'));
+    console.log(pc.gray('\nTry manually: npm install -g thanh-kit'));
   }
 }

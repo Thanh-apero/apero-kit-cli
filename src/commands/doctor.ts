@@ -300,7 +300,7 @@ async function outputReport(projectDir: string, results: CheckResult[], options:
   const summary = computeSummary(results);
   const timestamp = new Date().toISOString();
 
-  let markdown = `# Apero Kit Doctor Report\n\n`;
+  let markdown = `# Thanh Kit Doctor Report\n\n`;
   markdown += `**Project:** ${projectDir}\n`;
   markdown += `**Timestamp:** ${timestamp}\n\n`;
 
@@ -340,13 +340,13 @@ async function outputReport(projectDir: string, results: CheckResult[], options:
   } else {
     for (const r of failedChecks) {
       if (r.name === 'project') {
-        markdown += `- Run "ak init ." to initialize this directory\n`;
+        markdown += `- Run "tk init ." to initialize this directory\n`;
       }
       if (r.name === 'state') {
-        markdown += `- State file is missing. Re-run "ak init" or create manually\n`;
+        markdown += `- State file is missing. Re-run "tk init" or create manually\n`;
       }
       if (r.name === 'source' && r.meta?.source) {
-        markdown += `- Update source path: ak update --source <new-path>\n`;
+        markdown += `- Update source path: tk update --source <new-path>\n`;
       }
     }
   }
@@ -366,7 +366,7 @@ async function outputColored(
   state: any,
   targetDir: { name: string; folder: string; dir: string } | null
 ): Promise<void> {
-  console.log(pc.bold(pc.cyan('\nApero Kit Doctor\n')));
+  console.log(pc.bold(pc.cyan('\nThanh Kit Doctor\n')));
   console.log(pc.gray('Checking project health...\n'));
 
   // Output each check result
@@ -433,15 +433,15 @@ async function outputColored(
     const hasState = results.find(r => r.name === 'state')?.passed;
 
     if (!isProject) {
-      console.log(pc.white('  • Run "ak init ." to initialize this directory'));
+      console.log(pc.white('  • Run "tk init ." to initialize this directory'));
     }
 
     if (!hasState && isProject) {
-      console.log(pc.white('  • State file is missing. Re-run "ak init" or create manually'));
+      console.log(pc.white('  • State file is missing. Re-run "tk init" or create manually'));
     }
 
     if (state && state.source && !fs.existsSync(state.source)) {
-      console.log(pc.white('  • Update source path: ak update --source <new-path>'));
+      console.log(pc.white('  • Update source path: tk update --source <new-path>'));
     }
 
     console.log('');

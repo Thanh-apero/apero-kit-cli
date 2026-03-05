@@ -14,6 +14,13 @@ export const CLI_ROOT = __dirname.endsWith('dist')
   : resolve(__dirname, '../..');
 export const TEMPLATES_DIR = join(CLI_ROOT, 'templates');
 
+// CK-Internal paths (latest Claude Kit source)
+const CK_INTERNAL_PATHS = [
+  '/Users/nguyenthanh/AndroidStudioProjects/CK-Internal',
+  join(homedir(), 'AndroidStudioProjects/CK-Internal'),
+  join(homedir(), 'CK-Internal')
+];
+
 export const TARGETS: Record<string, string> = {
   claude: '.claude',
   gemini: '.gemini',
@@ -34,6 +41,25 @@ export interface SourceInfo {
 
 export interface SourceError {
   error: string;
+}
+
+/**
+ * Get CK-Internal source (latest Claude Kit)
+ */
+export function getCkInternalSource(): SourceInfo | null {
+  for (const basePath of CK_INTERNAL_PATHS) {
+    const claudeDir = join(basePath, '.claude');
+    if (existsSync(claudeDir) && existsSync(join(claudeDir, 'skills'))) {
+      const agentsMd = join(basePath, 'AGENTS.md');
+      return {
+        path: basePath,
+        type: 'ck-internal',
+        claudeDir,
+        agentsMd: existsSync(agentsMd) ? agentsMd : null
+      };
+    }
+  }
+  return null;
 }
 
 /**
@@ -88,8 +114,8 @@ export function getTargetDir(projectDir: string, target: string = 'claude'): str
 }
 
 /**
- * Resolve source path (from --source flag or embedded templates)
- * Priority: 1. --source flag  2. Embedded templates
+ * Resolve source path
+ * Priority: 1. --source flag  2. CK-Internal  3. Embedded templates
  */
 export function resolveSource(sourceFlag?: string): SourceInfo | SourceError {
   // 1. If --source flag provided, use it
@@ -134,13 +160,19 @@ export function resolveSource(sourceFlag?: string): SourceInfo | SourceError {
     return { error: `No templates found in: ${sourceFlag}` };
   }
 
-  // 2. Use embedded templates (bundled with CLI)
+  // 2. Check CK-Internal (latest Claude Kit source)
+  const ckInternal = getCkInternalSource();
+  if (ckInternal) {
+    return ckInternal;
+  }
+
+  // 3. Use embedded templates (bundled with CLI)
   const embedded = getEmbeddedTemplates();
   if (embedded) {
     return embedded;
   }
 
   return {
-    error: 'No templates found. Reinstall: npm install -g apero-kit-cli'
+    error: 'No templates found. Reinstall: npm install -g thanh-kit'
   };
 }

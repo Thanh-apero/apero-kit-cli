@@ -11,11 +11,11 @@ export async function addCommand(item: string, options: Record<string, any> = {}
   // Parse item format: type:name (e.g., skill:databases, agent:debugger)
   const parts = item.split(':');
   if (parts.length !== 2) {
-    console.log(pc.red('Invalid format. Use: ak add <type>:<name>'));
+    console.log(pc.red('Invalid format. Use: tk add <type>:<name>'));
     console.log(pc.gray('Examples:'));
-    console.log(pc.gray('  ak add skill:databases'));
-    console.log(pc.gray('  ak add agent:debugger'));
-    console.log(pc.gray('  ak add command:fix/ci'));
+    console.log(pc.gray('  tk add skill:databases'));
+    console.log(pc.gray('  tk add agent:debugger'));
+    console.log(pc.gray('  tk add command:fix/ci'));
     return;
   }
 
@@ -46,7 +46,7 @@ export async function addCommand(item: string, options: Record<string, any> = {}
   // Check if in ak project
   if (!isAkProject(projectDir)) {
     console.log(pc.red('Not in an ak project.'));
-    console.log(pc.gray('Run "ak init" first or use --path to specify project directory.'));
+    console.log(pc.gray('Run "tk init" first or use --path to specify project directory.'));
     return;
   }
 
@@ -70,7 +70,7 @@ export async function addCommand(item: string, options: Record<string, any> = {}
 
   if (!exists) {
     console.log(pc.red(`${type} "${name}" not found in source.`));
-    console.log(pc.gray(`Use "ak list ${normalizedType}" to see available options.`));
+    console.log(pc.gray(`Use "tk list ${normalizedType}" to see available options.`));
     return;
   }
 
@@ -83,7 +83,7 @@ export async function addCommand(item: string, options: Record<string, any> = {}
   const destPathMd = destPath + '.md';
   if (fs.existsSync(destPath) || fs.existsSync(destPathMd)) {
     console.log(pc.yellow(`${type} "${name}" already exists in project.`));
-    console.log(pc.gray('Use "ak update" to refresh from source.'));
+    console.log(pc.gray('Use "tk update" to refresh from source.'));
     return;
   }
 

@@ -3,7 +3,7 @@ import { homedir } from 'os';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 
-const CACHE_DIR = join(homedir(), '.apero-kit');
+const CACHE_DIR = join(homedir(), '.thanh-kit');
 const CACHE_FILE = join(CACHE_DIR, 'version-check.json');
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -28,7 +28,7 @@ export function getCachedLatestVersion(): string | null {
 
   // Fetch fresh from npm
   try {
-    const version = execSync('npm view apero-kit-cli version', {
+    const version = execSync('npm view thanh-kit version', {
       encoding: 'utf-8',
       timeout: 5000,
       stdio: ['pipe', 'pipe', 'pipe']

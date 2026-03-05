@@ -9,7 +9,7 @@ export async function statusCommand(options: Record<string, any> = {}): Promise<
   // Check if in ak project
   if (!isAkProject(projectDir)) {
     console.log(pc.red('Not in an ak project.'));
-    console.log(pc.gray('Run "ak init" first.'));
+    console.log(pc.gray('Run "tk init" first.'));
     return;
   }
 

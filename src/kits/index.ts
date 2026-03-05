@@ -1,12 +1,20 @@
+/**
+ * Kit Definitions
+ *
+ * Kits are predefined sets of agents, skills, and configurations.
+ * Note: CK-Internal structure no longer has commands/workflows directories.
+ * Commands are now defined within skills (slash commands in SKILL.md).
+ */
+
 export interface Kit {
   name: string;
   description: string;
   emoji: string;
   color: string;
   agents: string[] | 'all';
-  commands: string[] | 'all';
+  commands: string[] | 'all';     // Legacy - empty for CK-Internal
   skills: string[] | 'all';
-  workflows: string[] | 'all';
+  workflows: string[] | 'all';    // Legacy - empty for CK-Internal
   includeRouter: boolean;
   includeHooks: boolean;
 }
@@ -23,28 +31,20 @@ export const KITS: Record<string, Kit> = {
       'fullstack-developer',
       'tester',
       'code-reviewer',
-      'git-manager',
-      'database-admin'
+      'git-manager'
     ],
-    commands: [
-      'plan', 'plan/parallel', 'plan/fast', 'plan/hard',
-      'code', 'code/auto', 'code/parallel',
-      'fix', 'fix/test', 'fix/types', 'fix/fast', 'fix/ci',
-      'test', 'test/ui',
-      'review', 'review/codebase',
-      'scout', 'build', 'lint'
-    ],
+    commands: [],
     skills: [
       'frontend-development',
       'backend-development',
       'databases',
-      'debugging',
+      'debug',
       'code-review',
-      'planning',
-      'problem-solving'
+      'fix',
+      'cook'
     ],
-    workflows: ['feature-development', 'bug-fixing'],
-    includeRouter: true,
+    workflows: [],
+    includeRouter: false,
     includeHooks: true
   },
 
@@ -55,26 +55,19 @@ export const KITS: Record<string, Kit> = {
     color: 'green',
     agents: [
       'researcher',
-      'scout',
-      'scout-external',
       'brainstormer',
       'docs-manager',
       'planner'
     ],
-    commands: [
-      'scout', 'scout/ext',
-      'investigate', 'brainstorm',
-      'docs', 'docs/init', 'docs/update', 'docs/summarize',
-      'plan', 'ask', 'context'
-    ],
+    commands: [],
     skills: [
-      'research',
-      'planning-with-files',
-      'documentation',
-      'project-index'
+      'ask',
+      'brainstorm',
+      'docs',
+      'find-skills'
     ],
     workflows: [],
-    includeRouter: true,
+    includeRouter: false,
     includeHooks: false
   },
 
@@ -88,11 +81,9 @@ export const KITS: Record<string, Kit> = {
       'fullstack-developer',
       'code-reviewer'
     ],
-    commands: [
-      'code', 'fix', 'fix/ui', 'test/ui', 'review'
-    ],
+    commands: [],
     skills: [
-      'ui-ux-pro-max',
+      'ui-styling',
       'frontend-development',
       'frontend-design'
     ],
@@ -107,8 +98,8 @@ export const KITS: Record<string, Kit> = {
     emoji: '📦',
     color: 'yellow',
     agents: ['planner', 'debugger'],
-    commands: ['plan', 'fix', 'code'],
-    skills: ['planning', 'debugging'],
+    commands: [],
+    skills: ['fix', 'cook'],
     workflows: [],
     includeRouter: false,
     includeHooks: false
@@ -116,14 +107,14 @@ export const KITS: Record<string, Kit> = {
 
   full: {
     name: 'full',
-    description: 'Complete kit with ALL agents, commands, and skills',
+    description: 'Complete kit with ALL agents and skills',
     emoji: '🚀',
     color: 'cyan',
     agents: 'all',
-    commands: 'all',
+    commands: [],
     skills: 'all',
-    workflows: 'all',
-    includeRouter: true,
+    workflows: [],
+    includeRouter: false,
     includeHooks: true
   }
 };

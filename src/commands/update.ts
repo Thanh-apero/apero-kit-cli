@@ -13,7 +13,7 @@ export async function updateCommand(options: Record<string, any> = {}): Promise<
   // Check if in ak project
   if (!isAkProject(projectDir)) {
     console.log(pc.red('Not in an ak project.'));
-    console.log(pc.gray('Run "ak init" first.'));
+    console.log(pc.gray('Run "tk init" first.'));
     return;
   }
 
@@ -21,7 +21,7 @@ export async function updateCommand(options: Record<string, any> = {}): Promise<
   const state = await loadState(projectDir);
   if (!state) {
     console.log(pc.red('No state file found.'));
-    console.log(pc.gray('This project may have been created without ak. Run "ak doctor" for more info.'));
+    console.log(pc.gray('This project may have been created without tk. Run "tk doctor" for more info.'));
     return;
   }
 

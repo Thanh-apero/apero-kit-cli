@@ -21,7 +21,7 @@ export function registerCommands(cli: CAC): void {
 
   // add
   cli
-    .command('add <item>', 'Add agent, skill, or command (e.g., ak add skill:databases)')
+    .command('add <item>', 'Add agent, skill, or command (e.g., tk add skill:databases)')
     .option('-s, --source <path>', 'Custom source path')
     .option('-p, --path <path>', 'Target project path')
     .action(async (item: string, options: Record<string, any>) => {

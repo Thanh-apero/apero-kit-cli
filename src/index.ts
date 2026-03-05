@@ -19,7 +19,7 @@ function getVersion(): string {
   }
 }
 
-const cli = cac('ak');
+const cli = cac('tk');
 registerCommands(cli);
 cli.help();
 cli.version(getVersion());
@@ -31,6 +31,6 @@ try {
   const cachedLatest = getCachedVersionNoFetch();
   if (cachedLatest && isNewerVersion(version, cachedLatest)) {
     console.log(pc.yellow(`\n  Update available: v${version} → v${cachedLatest}`));
-    console.log(pc.gray('  Run "ak update-cli" to update\n'));
+    console.log(pc.gray('  Run "tk update-cli" to update\n'));
   }
 } catch { /* silent */ }

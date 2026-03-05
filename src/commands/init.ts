@@ -3,13 +3,20 @@ import { join, resolve } from 'path';
 import pc from 'picocolors';
 import ora from 'ora';
 import { KITS, getKit } from '../kits/index.js';
-import { resolveSource, getTargetDir, TARGETS, getGlobalInstallPath, type CliTarget } from '../utils/paths.js';
-import { copyItems, copyAllOfType, copyRouter, copyHooks, copyBaseFiles, copyAgentsMd, copyDirectory, copyCommandsForGemini, copySkillsForGemini, copyAgentsForGemini, copyGeminiBaseFiles, copyAgentsForDiscord, copyCommandsForDiscord, copySkillsForDiscord, copyDiscordBaseFiles, convertCommandsToSkills, copyBundledSkillsForDiscord, updateDiscordConfig, setupOpenClawConfig } from '../utils/copy.js';
-import { createInitialState } from '../utils/state.js';
+import { resolveSource, getGlobalInstallPath } from '../utils/paths.js';
 import {
-  promptProjectName,
+  getAdapter,
+  isValidTarget,
+  getTargetDirectory,
+  getTargetDisplayName,
+  type TargetName,
+  type InstallItems
+} from '../targets/index.js';
+import { DiscordAdapter } from '../targets/discord-adapter.js';
+import { createInitialState } from '../utils/state.js';
+import { copyAgentsMd } from '../utils/copy.js';
+import {
   promptKit,
-  promptTarget,
   promptAgents,
   promptSkills,
   promptCommands,
@@ -49,13 +56,11 @@ export async function initCommand(projectName: string | undefined, options: Reco
 
   // Password protection
   if (options.password !== undefined) {
-    // Password provided via CLI flag (convert to string for comparison)
     if (String(options.password) !== INIT_PASSWORD) {
       console.log(pc.red('Invalid access code. Access denied.'));
       return;
     }
   } else if (process.stdin.isTTY && !options.yes) {
-    // Interactive mode - prompt for password
     const { password } = await import('@clack/prompts').then(p => ({
       password: p.password
     }));
@@ -68,22 +73,19 @@ export async function initCommand(projectName: string | undefined, options: Reco
       return;
     }
   } else {
-    // Non-interactive mode without password
     console.log(pc.red('Access code required. Use --password <code>'));
     return;
   }
 
-  // 1. Get project name (support current directory with "." or empty)
+  // 1. Get project directory
   let projectDir: string;
   let isCurrentDir = false;
 
-  // Handle --global flag
   if (options.global) {
     projectDir = getGlobalInstallPath();
     isCurrentDir = true;
     console.log(pc.cyan(`Installing globally to ${projectDir}`));
   } else if (!projectName || projectName === '.') {
-    // Use current directory
     projectDir = process.cwd();
     projectName = '.';
     isCurrentDir = true;
@@ -92,12 +94,11 @@ export async function initCommand(projectName: string | undefined, options: Reco
     projectDir = resolve(process.cwd(), projectName);
   }
 
-  // 2. Get CLI targets (Claude, Gemini, Discord, or combination)
-  let cliTargets: CliTarget[];
+  // 2. Get CLI targets
+  let cliTargets: TargetName[];
   if (options.target) {
-    // Support comma-separated targets: --target claude,gemini,discord
-    const targetsFromFlag = options.target.split(',').map((t: string) => t.trim()) as CliTarget[];
-    cliTargets = targetsFromFlag.filter(t => t === 'claude' || t === 'gemini' || t === 'discord');
+    const targetsFromFlag = options.target.split(',').map((t: string) => t.trim());
+    cliTargets = targetsFromFlag.filter((t: string) => isValidTarget(t)) as TargetName[];
     if (cliTargets.length === 0) {
       console.log(pc.yellow(`Unknown target "${options.target}", using "claude"`));
       cliTargets = ['claude'];
@@ -105,7 +106,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
   } else if (!process.stdin.isTTY || options.yes) {
     cliTargets = ['claude'];
   } else {
-    cliTargets = await promptCliTargets();
+    cliTargets = await promptCliTargets() as TargetName[];
   }
 
   // Discord setup - prompt for token if Discord is selected
@@ -120,14 +121,13 @@ export async function initCommand(projectName: string | undefined, options: Reco
   const existingTargets: string[] = [];
 
   for (const target of cliTargets) {
-    const targetDir = getTargetDir(projectDir, target);
+    const targetDir = join(projectDir, getTargetDirectory(target));
 
-    // Handle --fresh flag (remove existing installation)
     if (options.fresh && fs.existsSync(targetDir)) {
       await fs.remove(targetDir);
-      existingTargets.push(TARGETS[target]);
+      existingTargets.push(getTargetDisplayName(target));
     } else if (fs.existsSync(targetDir) && !options.force) {
-      existingTargets.push(TARGETS[target]);
+      existingTargets.push(getTargetDisplayName(target));
     }
   }
 
@@ -180,21 +180,14 @@ export async function initCommand(projectName: string | undefined, options: Reco
   if (!kitName && !options.force && !options.yes) {
     kitName = await promptKit();
   } else if (!kitName) {
-    kitName = 'engineer'; // Default kit for --force/--yes mode
+    kitName = 'engineer';
   }
 
   // 5. Set merge mode based on existing action
   const mergeMode = existingAction === 'merge';
 
   // 6. Prepare what to install
-  let toInstall: {
-    agents: string[] | 'all';
-    commands: string[] | 'all';
-    skills: string[] | 'all';
-    workflows: string[] | 'all';
-    includeRouter: boolean;
-    includeHooks: boolean;
-  } = {
+  let toInstall: InstallItems = {
     agents: [],
     commands: [],
     skills: [],
@@ -204,13 +197,16 @@ export async function initCommand(projectName: string | undefined, options: Reco
   };
 
   if (kitName === 'custom' && !options.yes) {
-    // Custom mode - prompt for everything (unless --yes is set)
     console.log(pc.cyan('\nCustom kit configuration:'));
     toInstall.agents = await promptAgents(source.claudeDir);
     toInstall.skills = await promptSkills(source.claudeDir);
     toInstall.commands = await promptCommands(source.claudeDir);
-    toInstall.includeRouter = await promptIncludeRouter();
-    toInstall.includeHooks = await promptIncludeHooks();
+
+    // Only ask for Claude-only features if Claude is a target
+    if (cliTargets.includes('claude')) {
+      toInstall.includeRouter = await promptIncludeRouter();
+      toInstall.includeHooks = await promptIncludeHooks();
+    }
   } else {
     const kit = getKit(kitName);
     if (!kit) {
@@ -240,7 +236,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
   // 6. Confirm
   console.log(pc.cyan('\nWill create:'));
   console.log(pc.white(`  Project: ${projectName}/`));
-  console.log(pc.white(`  Targets: ${cliTargets.map(t => TARGETS[t]).join(', ')}/`));
+  console.log(pc.white(`  Targets: ${cliTargets.map(t => getTargetDisplayName(t)).join(', ')}`));
   console.log(pc.white(`  Kit:     ${kitName}`));
 
   if (Array.isArray(toInstall.agents)) {
@@ -263,133 +259,101 @@ export async function initCommand(projectName: string | undefined, options: Reco
     }
   }
 
-  // 7. Create project
+  // 7. Create project using adapters
   const spinner = ora('Creating project...').start();
 
   try {
-    // Create project directory
     await fs.ensureDir(projectDir);
 
-    // Install for each CLI target
+    // Install for each CLI target using adapters
     for (const target of cliTargets) {
-      const targetDir = getTargetDir(projectDir, target);
+      const adapter = getAdapter(target);
+      const targetDir = join(projectDir, adapter.config.directory);
       await fs.ensureDir(targetDir);
 
-      const targetLabel = target === 'gemini' ? 'Gemini' : target === 'discord' ? 'Discord' : 'Claude';
+      const targetLabel = adapter.config.displayName;
+
+      // For 'full' kit with Claude target: simple full copy
+      if (kitName === 'full' && target === 'claude') {
+        spinner.text = mergeMode ? `Merging full kit (${targetLabel})...` : `Copying full kit (${targetLabel})...`;
+
+        // Copy entire source directory
+        const items = await fs.readdir(source.claudeDir);
+        for (const item of items) {
+          const srcPath = join(source.claudeDir, item);
+          const destPath = join(targetDir, item);
+
+          if (mergeMode && await fs.pathExists(destPath)) {
+            continue;
+          }
+
+          await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+        }
+        continue; // Skip component-by-component copy
+      }
+
+      // Filter items based on target capabilities
+      const filteredItems = adapter.filterInstallItems(toInstall);
 
       // Copy agents
       spinner.text = mergeMode ? `Merging agents (${targetLabel})...` : `Copying agents (${targetLabel})...`;
-      if (target === 'gemini') {
-        // Convert Claude agent format to Gemini (map model names)
-        await copyAgentsForGemini(toInstall.agents, source.claudeDir, targetDir, mergeMode);
-      } else if (target === 'discord') {
-        // Convert Claude agent format to Discord/Clawbot
-        await copyAgentsForDiscord(toInstall.agents, source.claudeDir, targetDir, mergeMode);
-      } else {
-        if (toInstall.agents === 'all') {
-          await copyAllOfType('agents', source.claudeDir, targetDir, mergeMode);
-        } else if (toInstall.agents.length > 0) {
-          await copyItems(toInstall.agents, 'agents', source.claudeDir, targetDir, mergeMode);
-        }
-      }
+      await adapter.copyAgents(filteredItems.agents, source.claudeDir, targetDir, mergeMode);
 
       // Copy skills
       spinner.text = mergeMode ? `Merging skills (${targetLabel})...` : `Copying skills (${targetLabel})...`;
-      if (target === 'gemini') {
-        await copySkillsForGemini(toInstall.skills, source.claudeDir, targetDir, mergeMode);
-      } else if (target === 'discord') {
-        await copySkillsForDiscord(toInstall.skills, source.claudeDir, targetDir, mergeMode);
-      } else {
-        if (toInstall.skills === 'all') {
-          await copyAllOfType('skills', source.claudeDir, targetDir, mergeMode);
-        } else if (toInstall.skills.length > 0) {
-          await copyItems(toInstall.skills, 'skills', source.claudeDir, targetDir, mergeMode);
-        }
-      }
+      await adapter.copySkills(filteredItems.skills, source.claudeDir, targetDir, mergeMode);
 
       // Copy commands
       spinner.text = mergeMode ? `Merging commands (${targetLabel})...` : `Copying commands (${targetLabel})...`;
-      if (target === 'gemini') {
-        // Convert MD to TOML for Gemini
-        await copyCommandsForGemini(toInstall.commands, source.claudeDir, targetDir, mergeMode);
-      } else if (target === 'discord') {
-        // Convert to Discord/Clawbot format + generate commands.json5
-        await copyCommandsForDiscord(toInstall.commands, source.claudeDir, targetDir, mergeMode);
-        // Also convert commands to OpenClaw skills format
-        spinner.text = mergeMode ? `Converting commands to skills (${targetLabel})...` : `Converting commands to skills (${targetLabel})...`;
-        await convertCommandsToSkills(toInstall.commands, source.claudeDir, targetDir, mergeMode);
-        // Copy bundled skills (train-prompt, etc.)
-        spinner.text = `Copying bundled skills (${targetLabel})...`;
-        await copyBundledSkillsForDiscord(targetDir, mergeMode);
-      } else {
-        if (toInstall.commands === 'all') {
-          await copyAllOfType('commands', source.claudeDir, targetDir, mergeMode);
-        } else if (toInstall.commands.length > 0) {
-          await copyItems(toInstall.commands, 'commands', source.claudeDir, targetDir, mergeMode);
-        }
-      }
+      await adapter.copyCommands(filteredItems.commands, source.claudeDir, targetDir, mergeMode);
 
-      // Copy workflows (Claude only)
-      if (target === 'claude') {
+      // Copy workflows (if supported)
+      if (adapter.supports('workflows') && filteredItems.workflows.length > 0) {
         spinner.text = mergeMode ? `Merging workflows (${targetLabel})...` : `Copying workflows (${targetLabel})...`;
-        if (toInstall.workflows === 'all') {
-          await copyAllOfType('workflows', source.claudeDir, targetDir, mergeMode);
-        } else if (toInstall.workflows && toInstall.workflows.length > 0) {
-          await copyItems(toInstall.workflows, 'workflows', source.claudeDir, targetDir, mergeMode);
-        }
+        await adapter.copyWorkflows(filteredItems.workflows, source.claudeDir, targetDir, mergeMode);
       }
 
-      // Copy router (Claude only)
-      if (target === 'claude' && toInstall.includeRouter) {
+      // Copy router (if supported and requested)
+      if (adapter.supports('router') && filteredItems.includeRouter) {
         spinner.text = mergeMode ? `Merging router (${targetLabel})...` : `Copying router (${targetLabel})...`;
-        await copyRouter(source.claudeDir, targetDir, mergeMode);
+        await adapter.copyRouter(source.claudeDir, targetDir, mergeMode);
       }
 
-      // Copy hooks (Claude only)
-      if (target === 'claude' && toInstall.includeHooks) {
+      // Copy hooks (if supported and requested)
+      if (adapter.supports('hooks') && filteredItems.includeHooks) {
         spinner.text = mergeMode ? `Merging hooks (${targetLabel})...` : `Copying hooks (${targetLabel})...`;
-        await copyHooks(source.claudeDir, targetDir, mergeMode);
+        await adapter.copyHooks(source.claudeDir, targetDir, mergeMode);
       }
 
-      // Copy extra directories and base files
-      if (target === 'claude') {
-        spinner.text = mergeMode ? `Merging extras (${targetLabel})...` : `Copying extras (${targetLabel})...`;
-        await copyDirectory('memory', source.claudeDir, targetDir, mergeMode);
-        await copyDirectory('output-styles', source.claudeDir, targetDir, mergeMode);
-        await copyDirectory('scripts', source.claudeDir, targetDir, mergeMode);
-        // Copy base files (includes statusline files)
-        spinner.text = mergeMode ? `Merging base files (${targetLabel})...` : `Copying base files (${targetLabel})...`;
-        await copyBaseFiles(source.claudeDir, targetDir, mergeMode);
-      } else if (target === 'gemini') {
-        // Copy Gemini settings.json (with plan mode & subagents enabled)
-        spinner.text = mergeMode ? `Merging settings (${targetLabel})...` : `Copying settings (${targetLabel})...`;
-        await copyGeminiBaseFiles(targetDir, mergeMode);
-      } else if (target === 'discord') {
-        // Copy Discord/Clawbot config files
-        spinner.text = mergeMode ? `Merging config (${targetLabel})...` : `Copying config (${targetLabel})...`;
-        await copyDiscordBaseFiles(targetDir, mergeMode);
+      // Copy extras (memory, scripts, output-styles)
+      spinner.text = mergeMode ? `Merging extras (${targetLabel})...` : `Copying extras (${targetLabel})...`;
+      await adapter.copyExtras(source.claudeDir, targetDir, mergeMode);
 
-        // Apply Discord config if provided (skip if restartOnly)
-        if (discordConfig && !discordConfig.restartOnly) {
-          spinner.text = 'Configuring Discord bot...';
-          await updateDiscordConfig(targetDir, discordConfig.token, discordConfig.guildId);
+      // Copy base files
+      spinner.text = mergeMode ? `Merging base files (${targetLabel})...` : `Copying base files (${targetLabel})...`;
+      await adapter.copyBaseFiles(targetDir, mergeMode);
 
-          // Auto-setup OpenClaw if requested
-          if (discordConfig.autoSetup) {
-            spinner.text = 'Setting up OpenClaw...';
-            const result = await setupOpenClawConfig(discordConfig.token);
-            openclawSetupSuccess = result.success;
-            if (!result.success) {
-              console.log(pc.yellow(`\n  Note: ${result.message}`));
-            }
+      // Discord-specific setup
+      if (target === 'discord' && discordConfig && !discordConfig.restartOnly) {
+        const discordAdapter = adapter as DiscordAdapter;
+
+        spinner.text = 'Configuring Discord bot...';
+        await discordAdapter.updateConfig(targetDir, discordConfig.token, discordConfig.guildId);
+
+        if (discordConfig.autoSetup) {
+          spinner.text = 'Setting up OpenClaw...';
+          const result = await discordAdapter.setupOpenClaw(discordConfig.token);
+          openclawSetupSuccess = result.success;
+          if (!result.success) {
+            console.log(pc.yellow(`\n  Note: ${result.message}`));
           }
-        } else if (discordConfig?.restartOnly) {
-          openclawSetupSuccess = true; // Already configured
         }
+      } else if (target === 'discord' && discordConfig?.restartOnly) {
+        openclawSetupSuccess = true;
       }
     }
 
-    // Copy AGENTS.md (project root)
+    // Copy AGENTS.md (project root) - only if Claude is a target
     if (source.agentsMd && cliTargets.includes('claude')) {
       await copyAgentsMd(source.agentsMd, projectDir, mergeMode);
     }
@@ -400,7 +364,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
       kit: kitName,
       source: source.path,
       targets: cliTargets,
-      target: TARGETS[cliTargets[0]], // Keep backward compat
+      target: getTargetDirectory(cliTargets[0]),
       installed: {
         agents: toInstall.agents === 'all' ? ['all'] : toInstall.agents,
         skills: toInstall.skills === 'all' ? ['all'] : toInstall.skills,
@@ -421,11 +385,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
       console.log(pc.white(`  cd ${projectName}`));
     }
 
-    const targetNames = cliTargets.map(t => {
-      if (t === 'gemini') return 'Gemini CLI';
-      if (t === 'discord') return 'Discord + Clawbot';
-      return 'Claude Code';
-    }).join(' & ');
+    const targetNames = cliTargets.map(t => getTargetDisplayName(t)).join(' & ');
     console.log(pc.cyan(`Ready to code with ${targetNames}!`));
 
     console.log('');
@@ -439,7 +399,6 @@ export async function initCommand(projectName: string | undefined, options: Reco
       console.log('');
       console.log(pc.cyan('Discord Bot Setup:'));
 
-      // Use openclawInstalled from discordConfig (tracks if user installed during setup)
       const openclawInstalled = discordConfig?.openclawInstalled ?? false;
 
       if (!openclawInstalled) {
