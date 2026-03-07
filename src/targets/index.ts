@@ -5,17 +5,19 @@
 import type { ITargetAdapter, TargetFeatures } from './types.js';
 import { ClaudeAdapter } from './claude-adapter.js';
 import { GeminiAdapter } from './gemini-adapter.js';
+import { CodexAdapter } from './codex-adapter.js';
 import { DiscordAdapter } from './discord-adapter.js';
 
 export type { ITargetAdapter, TargetConfig, TargetFeatures, CopyResult, InstallItems } from './types.js';
 export { ClaudeAdapter } from './claude-adapter.js';
 export { GeminiAdapter } from './gemini-adapter.js';
+export { CodexAdapter } from './codex-adapter.js';
 export { DiscordAdapter } from './discord-adapter.js';
 
 /**
  * Supported target names
  */
-export type TargetName = 'claude' | 'gemini' | 'discord';
+export type TargetName = 'claude' | 'gemini' | 'codex' | 'discord';
 
 /**
  * Target registry - singleton instances
@@ -23,6 +25,7 @@ export type TargetName = 'claude' | 'gemini' | 'discord';
 const adapters: Record<TargetName, ITargetAdapter> = {
   claude: new ClaudeAdapter(),
   gemini: new GeminiAdapter(),
+  codex: new CodexAdapter(),
   discord: new DiscordAdapter()
 };
 

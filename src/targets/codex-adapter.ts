@@ -4,13 +4,13 @@ import { BaseTargetAdapter } from './base-adapter.js';
 import type { TargetConfig, CopyResult } from './types.js';
 
 /**
- * Model mapping from Claude to Gemini
+ * Model mapping from Claude to OpenAI Codex
  */
 const MODEL_MAP: Record<string, string> = {
-  'opus': 'gemini-2.5-pro',
-  'sonnet': 'gemini-2.5-flash',
-  'haiku': 'gemini-2.0-flash-lite',
-  'inherit': '' // Remove inherit, let Gemini use default
+  'opus': 'o3',
+  'sonnet': 'o4-mini',
+  'haiku': 'gpt-4.1-mini',
+  'inherit': '' // Remove inherit, let Codex use default
 };
 
 /**
@@ -24,52 +24,47 @@ function parseFrontmatter(content: string): { frontmatter: string; body: string 
   return { frontmatter: match[1], body: match[2] };
 }
 
-
 /**
- * Convert Claude agent to Gemini format
+ * Convert Claude agent to Codex format
  */
-function convertAgentToGemini(mdContent: string): string {
+function convertAgentToCodex(mdContent: string): string {
   const { frontmatter, body } = parseFrontmatter(mdContent);
   if (!frontmatter) return mdContent;
 
   let converted = frontmatter;
 
   // Map model names
-  for (const [claudeModel, geminiModel] of Object.entries(MODEL_MAP)) {
+  for (const [claudeModel, codexModel] of Object.entries(MODEL_MAP)) {
     const regex = new RegExp(`^model:\\s*${claudeModel}\\s*$`, 'm');
-    if (geminiModel) {
-      converted = converted.replace(regex, `model: ${geminiModel}`);
+    if (codexModel) {
+      converted = converted.replace(regex, `model: ${codexModel}`);
     } else {
       converted = converted.replace(regex, '');
     }
   }
 
-  // Remove tools field (different naming between Claude and Gemini)
+  // Remove tools field (different naming between Claude and Codex)
   converted = converted.replace(/^tools:\s*.+$/m, '');
-
-  // Add kind: local if not present
-  if (!converted.includes('kind:')) {
-    converted = converted.trim() + '\nkind: local';
-  }
 
   return `---\n${converted.trim()}\n---\n${body}`;
 }
 
-
 /**
- * Gemini CLI adapter - uses Agent Skills open standard
+ * Codex CLI adapter - uses Agent Skills open standard
  * Skills use same SKILL.md format as Claude (name, description + markdown)
- * Directory: .gemini/skills/
+ * Directory: .agents/skills/
+ *
+ * @see https://developers.openai.com/codex/skills/
  */
-export class GeminiAdapter extends BaseTargetAdapter {
+export class CodexAdapter extends BaseTargetAdapter {
   readonly config: TargetConfig = {
-    name: 'gemini',
-    displayName: 'Gemini CLI',
-    directory: '.gemini',
+    name: 'codex',
+    displayName: 'Codex CLI',
+    directory: '.agents',
     features: {
       agents: true,
       skills: true,
-      commands: false, // Gemini uses skills, not commands
+      commands: false, // Codex uses skills, not commands
       workflows: false,
       router: false,
       hooks: false,
@@ -127,7 +122,7 @@ export class GeminiAdapter extends BaseTargetAdapter {
 
         // Convert and write
         const mdContent = fs.readFileSync(srcPath, 'utf-8');
-        const convertedContent = convertAgentToGemini(mdContent);
+        const convertedContent = convertAgentToCodex(mdContent);
         await fs.writeFile(destPath, convertedContent, 'utf-8');
         copied.push(agent);
       } catch (err: any) {
@@ -201,7 +196,7 @@ export class GeminiAdapter extends BaseTargetAdapter {
     return { copied, skipped, errors };
   }
 
-  // Commands not supported - Gemini uses skills instead
+  // Commands not supported - Codex uses skills instead
   async copyCommands(
     _items: string[] | 'all',
     _sourceDir: string,
@@ -212,23 +207,10 @@ export class GeminiAdapter extends BaseTargetAdapter {
   }
 
   async copyBaseFiles(
-    targetDir: string,
-    mergeMode: boolean
+    _targetDir: string,
+    _mergeMode: boolean
   ): Promise<string[]> {
-    const { CLI_ROOT } = await import('../utils/paths.js');
-    const geminiTemplates = join(CLI_ROOT, 'templates', 'gemini');
-    const copied: string[] = [];
-
-    const settingsPath = join(geminiTemplates, 'settings.json');
-    const destSettingsPath = join(targetDir, 'settings.json');
-
-    if (fs.existsSync(settingsPath)) {
-      if (!(mergeMode && fs.existsSync(destSettingsPath))) {
-        await fs.copy(settingsPath, destSettingsPath, { overwrite: !mergeMode });
-        copied.push('settings.json');
-      }
-    }
-
-    return copied;
+    // No base files needed for Codex - skills are self-contained
+    return [];
   }
 }
