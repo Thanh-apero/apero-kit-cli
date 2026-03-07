@@ -24,12 +24,13 @@ const CK_INTERNAL_PATHS = [
 export const TARGETS: Record<string, string> = {
   claude: '.claude',
   gemini: '.gemini',
+  codex: '.agents',  // Codex uses .agents for skills, .codex for config
   discord: '.discord',
   opencode: '.opencode',
   generic: '.agent'
 };
 
-export type CliTarget = 'claude' | 'gemini' | 'discord';
+export type CliTarget = 'claude' | 'gemini' | 'codex' | 'discord';
 
 export interface SourceInfo {
   path: string;
@@ -95,12 +96,16 @@ export function isAkProject(dir: string = process.cwd()): boolean {
   const akConfig = join(dir, '.ak', 'state.json');
   const claudeDir = join(dir, '.claude');
   const geminiDir = join(dir, '.gemini');
+  const codexDir = join(dir, '.codex');
+  const agentsDir = join(dir, '.agents'); // Codex skills directory
   const opencodeDir = join(dir, '.opencode');
   const agentDir = join(dir, '.agent');
 
   return existsSync(akConfig) ||
          existsSync(claudeDir) ||
          existsSync(geminiDir) ||
+         existsSync(codexDir) ||
+         existsSync(agentsDir) ||
          existsSync(opencodeDir) ||
          existsSync(agentDir);
 }

@@ -52,6 +52,7 @@ export async function promptCliTargets(): Promise<CliTarget[]> {
     options: [
       { value: 'claude', label: 'Claude Code', hint: '.claude/' },
       { value: 'gemini', label: 'Gemini CLI', hint: '.gemini/' },
+      { value: 'codex', label: 'Codex CLI', hint: '.agents/ + .codex/' },
       { value: 'discord', label: 'Discord + Clawbot', hint: '.discord/' }
     ],
     initialValues: ['claude'],

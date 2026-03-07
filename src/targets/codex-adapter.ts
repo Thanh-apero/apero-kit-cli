@@ -52,15 +52,19 @@ function convertAgentToCodex(mdContent: string): string {
 /**
  * Codex CLI adapter - uses Agent Skills open standard
  * Skills use same SKILL.md format as Claude (name, description + markdown)
- * Directory: .agents/skills/
+ *
+ * Directory structure:
+ * - .codex/      - Config files (config.toml, config.local.toml)
+ * - .agents/     - Skills and agents directory
  *
  * @see https://developers.openai.com/codex/skills/
+ * @see https://developers.openai.com/codex/config-basic/
  */
 export class CodexAdapter extends BaseTargetAdapter {
   readonly config: TargetConfig = {
     name: 'codex',
     displayName: 'Codex CLI',
-    directory: '.agents',
+    directory: '.agents', // Main directory for skills/agents
     features: {
       agents: true,
       skills: true,
@@ -214,14 +218,34 @@ export class CodexAdapter extends BaseTargetAdapter {
     const codexTemplates = join(CLI_ROOT, 'templates', 'codex');
     const copied: string[] = [];
 
-    // Copy config.toml with bypass permissions
-    const configPath = join(codexTemplates, 'config.toml');
-    const destConfigPath = join(targetDir, 'config.toml');
+    // Get project root (parent of .agents directory)
+    const projectRoot = join(targetDir, '..');
 
-    if (fs.existsSync(configPath)) {
-      if (!(mergeMode && fs.existsSync(destConfigPath))) {
-        await fs.copy(configPath, destConfigPath, { overwrite: !mergeMode });
-        copied.push('config.toml');
+    // Config files go to .codex/ directory
+    const codexConfigDir = join(projectRoot, '.codex');
+    await fs.ensureDir(codexConfigDir);
+
+    const configFiles = ['config.toml', 'config.local.toml'];
+    for (const file of configFiles) {
+      const srcPath = join(codexTemplates, file);
+      const destPath = join(codexConfigDir, file);
+
+      if (fs.existsSync(srcPath)) {
+        if (!(mergeMode && fs.existsSync(destPath))) {
+          await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+          copied.push(`.codex/${file}`);
+        }
+      }
+    }
+
+    // AGENTS.md goes to project root
+    const agentsMdSrc = join(codexTemplates, 'AGENTS.md');
+    const agentsMdDest = join(projectRoot, 'AGENTS.md');
+
+    if (fs.existsSync(agentsMdSrc)) {
+      if (!(mergeMode && fs.existsSync(agentsMdDest))) {
+        await fs.copy(agentsMdSrc, agentsMdDest, { overwrite: !mergeMode });
+        copied.push('AGENTS.md');
       }
     }
 

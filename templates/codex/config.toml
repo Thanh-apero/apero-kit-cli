@@ -1,8 +1,72 @@
 # Codex CLI Configuration
-# https://developers.openai.com/codex/config-basic/
+# https://developers.openai.com/codex/config-reference/
 
-# Approval policy: "on-request" | "never" (auto-approve)
-approval_policy = "never"
+# Core Model Settings
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
+model_verbosity = "medium"
 
-# Sandbox mode: "workspace-write" | "danger-full-access"
+# Approval Policy: "untrusted" | "on-request" | "never"
+# - "untrusted": Always ask for approval (most secure)
+# - "on-request": Ask for approval in interactive sessions
+# - "never": Auto-approve all tool calls (bypassPermissions equivalent)
+approval_policy = "on-request"
+
+# Sandbox Mode: "read-only" | "workspace-write" | "danger-full-access"
+# - "read-only": No write access to filesystem
+# - "workspace-write": Write access within project workspace only
+# - "danger-full-access": Full filesystem access (use with caution)
 sandbox_mode = "workspace-write"
+
+# Web Search: "disabled" | "cached" | "live"
+web_search = "cached"
+
+# Shell Environment
+allow_login_shell = false
+
+[shell_environment_policy]
+inherit = "core"
+exclude = ["API_KEY", "SECRET", "PASSWORD", "TOKEN", "PRIVATE_KEY"]
+
+# Sandbox Workspace Settings
+[sandbox_workspace_write]
+network_access = true
+exclude_slash_tmp = false
+
+# Feature Flags
+[features]
+shell_tool = true
+multi_agent = true
+search_tool = true
+unified_exec = true
+apply_patch_freeform = true
+
+# Agent Configuration
+[agents]
+max_threads = 4
+max_depth = 2
+job_max_runtime_seconds = 300
+
+# Project Documentation Settings
+project_doc_max_bytes = 65536
+project_doc_fallback_filenames = ["AGENTS.md", "CODEX.md", "TEAM_GUIDE.md"]
+
+# TUI Settings
+[tui]
+animations = true
+alternate_screen = "auto"
+notifications = true
+show_tooltips = true
+
+# History Settings
+[history]
+persistence = "save-all"
+max_bytes = 10485760
+
+# Telemetry
+[otel]
+log_user_prompt = false
+
+# Feedback
+[feedback]
+enabled = false

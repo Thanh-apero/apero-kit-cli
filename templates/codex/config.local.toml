@@ -1,0 +1,17 @@
+# Codex CLI Local Configuration (bypassPermissions mode)
+# This file overrides config.toml with auto-approve settings
+# https://developers.openai.com/codex/config-reference/
+
+# Auto-approve all tool calls (equivalent to Claude's bypassPermissions)
+approval_policy = "never"
+
+# Full filesystem access
+sandbox_mode = "danger-full-access"
+
+# Enable all features
+[features]
+shell_tool = true
+multi_agent = true
+search_tool = true
+unified_exec = true
+apply_patch_freeform = true

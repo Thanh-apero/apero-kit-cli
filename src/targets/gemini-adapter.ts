@@ -219,13 +219,31 @@ export class GeminiAdapter extends BaseTargetAdapter {
     const geminiTemplates = join(CLI_ROOT, 'templates', 'gemini');
     const copied: string[] = [];
 
-    const settingsPath = join(geminiTemplates, 'settings.json');
-    const destSettingsPath = join(targetDir, 'settings.json');
+    // Get project root (parent of .gemini directory)
+    const projectRoot = join(targetDir, '..');
 
-    if (fs.existsSync(settingsPath)) {
-      if (!(mergeMode && fs.existsSync(destSettingsPath))) {
-        await fs.copy(settingsPath, destSettingsPath, { overwrite: !mergeMode });
-        copied.push('settings.json');
+    // Settings files go to .gemini/ directory
+    const settingsFiles = ['settings.json', 'settings.local.json'];
+    for (const file of settingsFiles) {
+      const srcPath = join(geminiTemplates, file);
+      const destPath = join(targetDir, file);
+
+      if (fs.existsSync(srcPath)) {
+        if (!(mergeMode && fs.existsSync(destPath))) {
+          await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
+          copied.push(file);
+        }
+      }
+    }
+
+    // GEMINI.md goes to project root
+    const geminiMdSrc = join(geminiTemplates, 'GEMINI.md');
+    const geminiMdDest = join(projectRoot, 'GEMINI.md');
+
+    if (fs.existsSync(geminiMdSrc)) {
+      if (!(mergeMode && fs.existsSync(geminiMdDest))) {
+        await fs.copy(geminiMdSrc, geminiMdDest, { overwrite: !mergeMode });
+        copied.push('GEMINI.md (project root)');
       }
     }
 

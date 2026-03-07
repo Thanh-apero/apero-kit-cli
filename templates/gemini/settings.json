@@ -1,5 +1,45 @@
 {
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "general": {
+    "vimMode": false,
+    "defaultApprovalMode": "default",
+    "enableAutoUpdate": true,
+    "enableNotifications": true,
+    "maxAttempts": 5,
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "30d"
+    },
+    "checkpointing": {
+      "enabled": true
+    }
+  },
+  "ui": {
+    "autoThemeSwitching": true,
+    "hideBanner": false,
+    "hideTips": false,
+    "showLineNumbers": true,
+    "showCitations": true,
+    "showModelInfoInChat": false,
+    "inlineThinkingMode": "full",
+    "loadingPhrases": "tips",
+    "errorVerbosity": "full"
+  },
+  "model": {
+    "name": "gemini-2.5-pro",
+    "maxSessionTurns": -1,
+    "compressionThreshold": 0.8,
+    "disableLoopDetection": false
+  },
   "tools": {
+    "sandbox": false,
+    "shell": {
+      "enableInteractiveShell": true,
+      "showColor": true,
+      "inactivityTimeout": 300
+    },
+    "useRipgrep": true,
+    "truncateToolOutputThreshold": 40000,
     "allowed": [
       "run_shell_command(git)",
       "run_shell_command(npm)",
@@ -31,7 +71,33 @@
       "run_shell_command(rustc)",
       "run_shell_command(docker)",
       "run_shell_command(gh)"
-    ],
-    "sandbox": true
+    ]
+  },
+  "context": {
+    "fileName": ["GEMINI.md", "AGENTS.md"],
+    "includeDirectoryTree": true,
+    "discoveryMaxDirs": 200,
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true,
+      "enableFuzzySearch": true
+    }
+  },
+  "security": {
+    "disableYoloMode": false,
+    "enablePermanentToolApproval": true,
+    "folderTrust": {
+      "enabled": true
+    },
+    "environmentVariableRedaction": {
+      "enabled": true,
+      "blocked": ["API_KEY", "SECRET", "PASSWORD", "TOKEN", "PRIVATE_KEY"]
+    }
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "experimental": {
+    "enableAgents": true
   }
 }
