@@ -1,0 +1,8 @@
+# Codex CLI Configuration
+# https://developers.openai.com/codex/config-basic/
+
+# Approval policy: "on-request" | "never" (auto-approve)
+approval_policy = "never"
+
+# Sandbox mode: "workspace-write" | "danger-full-access"
+sandbox_mode = "workspace-write"

@@ -207,10 +207,24 @@ export class CodexAdapter extends BaseTargetAdapter {
   }
 
   async copyBaseFiles(
-    _targetDir: string,
-    _mergeMode: boolean
+    targetDir: string,
+    mergeMode: boolean
   ): Promise<string[]> {
-    // No base files needed for Codex - skills are self-contained
-    return [];
+    const { CLI_ROOT } = await import('../utils/paths.js');
+    const codexTemplates = join(CLI_ROOT, 'templates', 'codex');
+    const copied: string[] = [];
+
+    // Copy config.toml with bypass permissions
+    const configPath = join(codexTemplates, 'config.toml');
+    const destConfigPath = join(targetDir, 'config.toml');
+
+    if (fs.existsSync(configPath)) {
+      if (!(mergeMode && fs.existsSync(destConfigPath))) {
+        await fs.copy(configPath, destConfigPath, { overwrite: !mergeMode });
+        copied.push('config.toml');
+      }
+    }
+
+    return copied;
   }
 }
