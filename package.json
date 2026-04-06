@@ -1,6 +1,6 @@
 {
   "name": "thanh-kit",
-  "version": "2.5.13",
+  "version": "2.5.14",
   "description": "CLI tool to scaffold AI agent projects with pre-configured kits (Claude, OpenCode, Codex)",
   "type": "module",
   "bin": {
