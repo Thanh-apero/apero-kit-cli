@@ -261,6 +261,10 @@ export async function initCommand(projectName: string | undefined, options: Reco
 
           await fs.copy(srcPath, destPath, { overwrite: !mergeMode });
         }
+
+        // Also copy base files from embedded templates (settings.local.json, etc.)
+        await adapter.copyBaseFiles(targetDir, mergeMode);
+
         continue; // Skip component-by-component copy
       }
 
