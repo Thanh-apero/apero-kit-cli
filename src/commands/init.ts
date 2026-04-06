@@ -14,7 +14,7 @@ import {
 } from '../targets/index.js';
 import { DiscordAdapter } from '../targets/discord-adapter.js';
 import { createInitialState } from '../utils/state.js';
-import { copyAgentsMd } from '../utils/copy.js';
+import { copyAgentsMd, copyClaudeMd, copyGeminiMd, copyAgentsDir } from '../utils/copy.js';
 import {
   promptKit,
   promptAgents,
@@ -94,7 +94,7 @@ export async function initCommand(projectName: string | undefined, options: Reco
     projectDir = resolve(process.cwd(), projectName);
   }
 
-  // 2. Get CLI targets
+  // 2. Get CLI targets - default to 'claude'
   let cliTargets: TargetName[];
   if (options.target) {
     const targetsFromFlag = options.target.split(',').map((t: string) => t.trim());
@@ -103,16 +103,14 @@ export async function initCommand(projectName: string | undefined, options: Reco
       console.log(pc.yellow(`Unknown target "${options.target}", using "claude"`));
       cliTargets = ['claude'];
     }
-  } else if (!process.stdin.isTTY || options.yes) {
-    cliTargets = ['claude'];
   } else {
-    cliTargets = await promptCliTargets() as TargetName[];
+    cliTargets = ['claude'];
   }
 
-  // Discord setup - prompt for token if Discord is selected
+  // Discord setup - only prompt if Discord is explicitly selected via --target
   let discordConfig: DiscordConfig | null = null;
   let openclawSetupSuccess = false;
-  if (cliTargets.includes('discord') && process.stdin.isTTY && !options.yes) {
+  if (cliTargets.includes('discord') && options.target && process.stdin.isTTY) {
     discordConfig = await promptDiscordSetup();
   }
 
@@ -139,21 +137,8 @@ export async function initCommand(projectName: string | undefined, options: Reco
     console.log(pc.cyan(`Fresh install: removed existing files (${existingTargets.join(', ')})`));
     existingAction = null;
   } else if (existingTargets.length > 0 && !options.force) {
-    if (!process.stdin.isTTY || options.yes) {
-      if (options.yes) {
-        existingAction = 'override';
-      } else {
-        console.log(pc.yellow(`${existingTargets.join(', ')} already exists. Use --force to override.`));
-        return;
-      }
-    } else {
-      existingAction = await promptExistingTarget(existingTargets.join(', '));
-
-      if (existingAction === 'skip') {
-        console.log(pc.yellow('Skipped. No changes made.'));
-        return;
-      }
-    }
+    // Default to override without prompts
+    existingAction = 'override';
   }
 
   // For new project directory, check if it exists
@@ -175,13 +160,8 @@ export async function initCommand(projectName: string | undefined, options: Reco
 
   console.log(pc.gray(`Source: ${source.path}`));
 
-  // 4. Get kit
-  let kitName = options.kit;
-  if (!kitName && !options.force && !options.yes) {
-    kitName = await promptKit();
-  } else if (!kitName) {
-    kitName = 'engineer';
-  }
+  // 4. Get kit - always default to 'full'
+  let kitName = options.kit || 'full';
 
   // 5. Set merge mode based on existing action
   const mergeMode = existingAction === 'merge';
@@ -250,14 +230,6 @@ export async function initCommand(projectName: string | undefined, options: Reco
   }
 
   console.log('');
-
-  // Skip confirmation if --force or --yes is set
-  if (!options.force && !options.yes) {
-    if (!await promptConfirm('Proceed?')) {
-      console.log(pc.yellow('Cancelled.'));
-      return;
-    }
-  }
 
   // 7. Create project using adapters
   const spinner = ora('Creating project...').start();
@@ -353,9 +325,20 @@ export async function initCommand(projectName: string | undefined, options: Reco
       }
     }
 
-    // Copy AGENTS.md (project root) - only if Claude is a target
-    if (source.agentsMd && cliTargets.includes('claude')) {
-      await copyAgentsMd(source.agentsMd, projectDir, mergeMode);
+    // Copy root files (AGENTS.md, CLAUDE.md, GEMINI.md, .agents/)
+    if (cliTargets.includes('claude')) {
+      if (source.agentsMd) {
+        await copyAgentsMd(source.agentsMd, projectDir, mergeMode);
+      }
+      if (source.claudeMd) {
+        await copyClaudeMd(source.claudeMd, projectDir, mergeMode);
+      }
+      if (source.geminiMd) {
+        await copyGeminiMd(source.geminiMd, projectDir, mergeMode);
+      }
+      if (source.agentsDir) {
+        await copyAgentsDir(source.agentsDir, projectDir, mergeMode);
+      }
     }
 
     // Create state file
