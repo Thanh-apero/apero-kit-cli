@@ -304,6 +304,75 @@ export async function copyAgentsMd(
 }
 
 /**
+ * Copy CLAUDE.md to project root
+ * @param {boolean} mergeMode - If true, skip if file exists
+ */
+export async function copyClaudeMd(
+  claudeMdPath: string | null,
+  projectDir: string,
+  mergeMode: boolean = false
+): Promise<boolean> {
+  if (!claudeMdPath || !fs.existsSync(claudeMdPath)) {
+    return false;
+  }
+
+  const destPath = join(projectDir, 'CLAUDE.md');
+
+  if (mergeMode && fs.existsSync(destPath)) {
+    return false;
+  }
+
+  await fs.copy(claudeMdPath, destPath, { overwrite: !mergeMode });
+  return true;
+}
+
+/**
+ * Copy GEMINI.md to project root
+ * @param {boolean} mergeMode - If true, skip if file exists
+ */
+export async function copyGeminiMd(
+  geminiMdPath: string | null,
+  projectDir: string,
+  mergeMode: boolean = false
+): Promise<boolean> {
+  if (!geminiMdPath || !fs.existsSync(geminiMdPath)) {
+    return false;
+  }
+
+  const destPath = join(projectDir, 'GEMINI.md');
+
+  if (mergeMode && fs.existsSync(destPath)) {
+    return false;
+  }
+
+  await fs.copy(geminiMdPath, destPath, { overwrite: !mergeMode });
+  return true;
+}
+
+/**
+ * Copy .agents directory to project root
+ * @param {boolean} mergeMode - If true, skip if directory exists
+ */
+export async function copyAgentsDir(
+  agentsDirPath: string | null,
+  projectDir: string,
+  mergeMode: boolean = false
+): Promise<boolean> {
+  if (!agentsDirPath || !fs.existsSync(agentsDirPath)) {
+    return false;
+  }
+
+  const destPath = join(projectDir, '.agents');
+
+  if (mergeMode && fs.existsSync(destPath)) {
+    return false;
+  }
+
+  await fs.copy(agentsDirPath, destPath, { overwrite: !mergeMode });
+  return true;
+}
+
+/**
  * List available items of a type
  */
 export function listAvailable(type: string, sourceDir: string): AvailableItem[] {

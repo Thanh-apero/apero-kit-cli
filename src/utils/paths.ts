@@ -36,7 +36,10 @@ export interface SourceInfo {
   path: string;
   type: string;
   claudeDir: string;
+  agentsDir: string | null;  // .agents/ directory for Codex
   agentsMd: string | null;
+  claudeMd: string | null;
+  geminiMd: string | null;
   error?: undefined;
 }
 
@@ -51,12 +54,18 @@ export function getCkInternalSource(): SourceInfo | null {
   for (const basePath of CK_INTERNAL_PATHS) {
     const claudeDir = join(basePath, '.claude');
     if (existsSync(claudeDir) && existsSync(join(claudeDir, 'skills'))) {
+      const agentsDir = join(basePath, '.agents');
       const agentsMd = join(basePath, 'AGENTS.md');
+      const claudeMd = join(basePath, 'CLAUDE.md');
+      const geminiMd = join(basePath, 'GEMINI.md');
       return {
         path: basePath,
         type: 'ck-internal',
         claudeDir,
-        agentsMd: existsSync(agentsMd) ? agentsMd : null
+        agentsDir: existsSync(agentsDir) ? agentsDir : null,
+        agentsMd: existsSync(agentsMd) ? agentsMd : null,
+        claudeMd: existsSync(claudeMd) ? claudeMd : null,
+        geminiMd: existsSync(geminiMd) ? geminiMd : null
       };
     }
   }
@@ -68,12 +77,18 @@ export function getCkInternalSource(): SourceInfo | null {
  */
 export function getEmbeddedTemplates(): SourceInfo | null {
   if (existsSync(TEMPLATES_DIR)) {
+    const agentsDir = join(TEMPLATES_DIR, '..', '.agents');
     const agentsMd = join(TEMPLATES_DIR, 'AGENTS.md');
+    const claudeMd = join(TEMPLATES_DIR, 'CLAUDE.md');
+    const geminiMd = join(TEMPLATES_DIR, 'GEMINI.md');
     return {
       path: TEMPLATES_DIR,
       type: 'embedded',
       claudeDir: TEMPLATES_DIR,
-      agentsMd: existsSync(agentsMd) ? agentsMd : null
+      agentsDir: existsSync(agentsDir) ? agentsDir : null,
+      agentsMd: existsSync(agentsMd) ? agentsMd : null,
+      claudeMd: existsSync(claudeMd) ? claudeMd : null,
+      geminiMd: existsSync(geminiMd) ? geminiMd : null
     };
   }
   return null;
@@ -134,12 +149,17 @@ export function resolveSource(sourceFlag?: string): SourceInfo | SourceError {
     const claudeDir = join(resolved, '.claude');
     const opencodeDir = join(resolved, '.opencode');
 
+    const agentsDir = join(resolved, '.agents');
+
     if (existsSync(claudeDir)) {
       return {
         path: resolved,
         type: 'custom',
         claudeDir,
-        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null
+        agentsDir: existsSync(agentsDir) ? agentsDir : null,
+        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null,
+        claudeMd: existsSync(join(resolved, 'CLAUDE.md')) ? join(resolved, 'CLAUDE.md') : null,
+        geminiMd: existsSync(join(resolved, 'GEMINI.md')) ? join(resolved, 'GEMINI.md') : null
       };
     }
 
@@ -148,7 +168,10 @@ export function resolveSource(sourceFlag?: string): SourceInfo | SourceError {
         path: resolved,
         type: 'custom',
         claudeDir: opencodeDir,
-        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null
+        agentsDir: existsSync(agentsDir) ? agentsDir : null,
+        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null,
+        claudeMd: existsSync(join(resolved, 'CLAUDE.md')) ? join(resolved, 'CLAUDE.md') : null,
+        geminiMd: existsSync(join(resolved, 'GEMINI.md')) ? join(resolved, 'GEMINI.md') : null
       };
     }
 
@@ -158,7 +181,10 @@ export function resolveSource(sourceFlag?: string): SourceInfo | SourceError {
         path: resolved,
         type: 'custom',
         claudeDir: resolved,
-        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null
+        agentsDir: existsSync(agentsDir) ? agentsDir : null,
+        agentsMd: existsSync(join(resolved, 'AGENTS.md')) ? join(resolved, 'AGENTS.md') : null,
+        claudeMd: existsSync(join(resolved, 'CLAUDE.md')) ? join(resolved, 'CLAUDE.md') : null,
+        geminiMd: existsSync(join(resolved, 'GEMINI.md')) ? join(resolved, 'GEMINI.md') : null
       };
     }
 
