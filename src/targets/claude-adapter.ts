@@ -287,7 +287,7 @@ export class ClaudeAdapter extends BaseTargetAdapter {
   ): Promise<string[]> {
     const { CLI_ROOT } = await import('../utils/paths.js');
     const sourceDir = join(CLI_ROOT, 'templates');
-    const baseFiles = ['README.md', 'settings.json', '.env.example', 'statusline.cjs', 'statusline.ps1', 'statusline.sh'];
+    const baseFiles = ['README.md', 'settings.json', 'settings.local.json', '.env.example', 'statusline.cjs', 'statusline.ps1', 'statusline.sh'];
     const copied: string[] = [];
 
     for (const file of baseFiles) {
