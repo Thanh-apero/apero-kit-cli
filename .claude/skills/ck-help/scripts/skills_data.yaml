@@ -20,8 +20,9 @@
 - argument_hint: '[file-path] [prompt]'
   category: ai-ml
   description: Analyze images/audio/video with Gemini API (better vision than Claude).
-    Generate images (Imagen 4), videos (Veo 3). Use for vision analysis, transcription,
-    OCR, design extraction, multimodal AI.
+    Generate images (Imagen 4, Nano Banana 2, MiniMax), videos (Veo 3, Hailuo), speech
+    (MiniMax TTS), music (MiniMax). Use for vision analysis, transcription, OCR, design
+    extraction, multimodal AI.
   has_references: true
   has_scripts: true
   name: ai-multimodal
@@ -78,19 +79,30 @@
   has_scripts: true
   name: chrome-devtools
   path: chrome-devtools/SKILL.md
-- argument_hint: '[category|command|task description]'
-  category: dev-tools
-  description: ClaudeKit usage guide — discover commands, skills, workflows naturally.
-  has_references: false
-  has_scripts: true
-  name: ck-help
-  path: ck-help/SKILL.md
-- argument_hint: '[context] OR codebase [parallel]'
+- argument_hint: '[error or issue description]'
   category: utilities
-  description: Review code quality, receive feedback with technical rigor, verify
-    completion claims. Use before PRs, after implementing features, when claiming
-    task completion. Includes scout-based edge case detection and native Task pipeline
-    orchestration.
+  description: Debug systematically with root cause analysis before fixes. Use for
+    bugs, test failures, unexpected behavior, performance issues, call stack tracing,
+    multi-layer validation, log analysis, CI/CD failures, database diagnostics, system
+    investigation.
+  has_references: true
+  has_scripts: true
+  name: ck-debug
+  path: ck-debug/SKILL.md
+- argument_hint: '[task] OR [archive|red-team|validate]'
+  category: other
+  description: Plan implementations, design architectures, create technical roadmaps
+    with detailed phases. Use for feature planning, system design, solution architecture,
+    implementation strategy, phase documentation.
+  has_references: true
+  has_scripts: false
+  name: ck-plan
+  path: ck-plan/SKILL.md
+- argument_hint: '[#PR | COMMIT | --pending | codebase [parallel]]'
+  category: utilities
+  description: 'Review code quality with adversarial rigor. Supports input modes:
+    pending changes, PR number, commit hash, codebase scan. Always-on red-team analysis
+    finds security holes, false assumptions, and failure modes.'
   has_references: true
   has_scripts: false
   name: code-review
@@ -139,16 +151,31 @@
   has_scripts: true
   name: databases
   path: databases/SKILL.md
-- argument_hint: '[error or issue description]'
-  category: utilities
-  description: Debug systematically with root cause analysis before fixes. Use for
-    bugs, test failures, unexpected behavior, performance issues, call stack tracing,
-    multi-layer validation, log analysis, CI/CD failures, database diagnostics, system
-    investigation.
+- argument_hint: '[platform] [environment]'
+  category: other
+  description: Deploy projects to any platform with auto-detection. Use when user
+    says "deploy", "publish", "ship", "go live", "push to production", "host this
+    app", or mentions any hosting platform (Vercel, Netlify, Cloudflare, Railway,
+    Fly.io, Render, Heroku, TOSE, Github Pages, AWS, GCP, Digital Ocean, Vultr, Coolify,
+    Dokploy). Auto-detects deployment target from config files and docs/deployment.md.
+  has_references: true
+  has_scripts: false
+  name: deploy
+  path: deploy/SKILL.md
+- argument_hint: '[design-type] [context]'
+  category: frontend
+  description: 'Comprehensive design skill: brand identity, design tokens, UI styling,
+    logo generation (55 styles, Gemini AI), corporate identity program (50 deliverables,
+    CIP mockups), HTML presentations (Chart.js), banner design (22 styles, social/ads/web/print),
+    icon design (15 styles, SVG, Gemini 3.1 Pro), social photos (HTML→screenshot,
+    multi-platform). Actions: design logo, create CIP, generate mockups, build slides,
+    design banner, generate icon, create social photos, social media images, brand
+    identity, design system. Platforms: Facebook, Twitter, LinkedIn, YouTube, Instagram,
+    Pinterest, TikTok, Threads, Google Ads.'
   has_references: true
   has_scripts: true
-  name: debug
-  path: debug/SKILL.md
+  name: design
+  path: design/SKILL.md
 - argument_hint: '[platform] [task]'
   category: infrastructure
   description: Deploy to Cloudflare (Workers, R2, D1), Docker, GCP (Cloud Run, GKE),
@@ -280,6 +307,14 @@
   has_scripts: false
   name: kanban
   path: kanban/SKILL.md
+- argument_hint: '[path|url] [--full] [--output path]'
+  category: other
+  description: Generate llms.txt files from docs or codebase scanning. Follows llmstxt.org
+    spec. Use for LLM-friendly site indexes, documentation summaries, AI context optimization.
+  has_references: true
+  has_scripts: true
+  name: llms
+  path: llms/SKILL.md
 - argument_hint: '[file-or-directory]'
   category: other
   description: View markdown files with calm, book-like reading experience via HTTP
@@ -356,15 +391,6 @@
   has_scripts: true
   name: payment-integration
   path: payment-integration/SKILL.md
-- argument_hint: '[task] OR archive|red-team|validate'
-  category: utilities
-  description: Plan implementations, design architectures, create technical roadmaps
-    with detailed phases. Use for feature planning, system design, solution architecture,
-    implementation strategy, phase documentation.
-  has_references: true
-  has_scripts: false
-  name: plan
-  path: plan/SKILL.md
 - argument_hint: '[plans-dir]'
   category: dev-tools
   description: View plans dashboard with progress tracking and timeline visualization.
@@ -374,9 +400,11 @@
   has_scripts: true
   name: plans-kanban
   path: plans-kanban/SKILL.md
-- argument_hint: '[path] OR --explain|--slides|--diagram|--ascii [topic]'
+- argument_hint: '[path] OR [--html] --explain|--slides|--diagram|--ascii [topic]
+    OR --html --diff|--plan-review|--recap'
   category: utilities
-  description: View files/directories OR generate visual explanations, slides, diagrams.
+  description: View files/directories OR generate visual explanations, slides, diagrams
+    (Markdown or self-contained HTML).
   has_references: true
   has_scripts: false
   name: preview
@@ -399,6 +427,15 @@
   has_scripts: false
   name: project-management
   path: project-management/SKILL.md
+- argument_hint: '[directories or files to organize]'
+  category: other
+  description: Organize files, directories, and content structure in any project.
+    Use when creating files, determining output paths, organizing existing assets,
+    or standardizing project layout.
+  has_references: true
+  has_scripts: false
+  name: project-organization
+  path: project-organization/SKILL.md
 - argument_hint: '[component or pattern]'
   category: other
   description: React and Next.js performance optimization guidelines from Vercel Engineering.
@@ -444,6 +481,15 @@
   has_scripts: false
   name: scout
   path: scout/SKILL.md
+- argument_hint: '[scope] [--secrets-only] [--deps-only] [--full]'
+  category: other
+  description: Scan codebase for security vulnerabilities, hardcoded secrets, dependency
+    issues, and OWASP patterns. Use when asked to 'security scan', 'check for secrets',
+    'audit security', or before major releases.
+  has_references: true
+  has_scripts: false
+  name: security-scan
+  path: security-scan/SKILL.md
 - argument_hint: '[problem to analyze step-by-step]'
   category: utilities
   description: Apply step-by-step analysis for complex problems with revision capability.
@@ -463,6 +509,16 @@
   has_scripts: false
   name: shader
   path: shader/SKILL.md
+- argument_hint: '[official|beta] [--skip-tests] [--skip-review] [--skip-journal]
+    [--skip-docs] [--dry-run]'
+  category: other
+  description: 'Ship pipeline: merge main, test, review, commit, push, PR. Single
+    command from feature branch to PR URL. Use for shipping official releases to main/master
+    or beta releases to dev/beta branches.'
+  has_references: true
+  has_scripts: false
+  name: ship
+  path: ship/SKILL.md
 - argument_hint: '[extension-type] [feature]'
   category: frameworks
   description: Build Shopify apps, extensions, themes with Shopify CLI. Use for GraphQL/REST
@@ -474,9 +530,9 @@
   path: shopify/SKILL.md
 - argument_hint: '[skill-name or description]'
   category: dev-tools
-  description: Create or update Claude skills optimized for Skillmark benchmarks.
-    Use for new skills, skill scripts, references, benchmark optimization, extending
-    Claude's capabilities.
+  description: Create or update Claude skills with eval-driven iteration. Use for
+    new skills, skill scripts, references, benchmark optimization, description optimization,
+    eval testing, extending Claude's capabilities.
   has_references: true
   has_scripts: true
   name: skill-creator
@@ -527,19 +583,19 @@
   has_scripts: true
   name: ui-styling
   path: ui-styling/SKILL.md
-- argument_hint: '[action] [element|project]'
-  category: frontend
-  description: 'UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings,
-    20 charts, 9 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter,
-    Tailwind, shadcn/ui). Actions: plan, build, create, design, implement, review,
-    fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website,
-    landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile
-    app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card,
-    table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism,
-    neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics:
-    color palette, accessibility, animation, layout, typography, font pairing, spacing,
-    hover, shadow, gradient. Integrations: shadcn/ui MCP for component search and
-    examples.'
+- category: frontend
+  description: 'UI/UX design intelligence for web and mobile. Includes 50+ styles,
+    161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, and
+    25 chart types across 10 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native,
+    Flutter, Tailwind, shadcn/ui, and HTML/CSS). Actions: plan, build, create, design,
+    implement, review, fix, improve, optimize, enhance, refactor, and check UI/UX
+    code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS,
+    portfolio, blog, and mobile app. Elements: button, modal, navbar, sidebar, card,
+    table, form, and chart. Styles: glassmorphism, claymorphism, minimalism, brutalism,
+    neumorphism, bento grid, dark mode, responsive, skeuomorphism, and flat design.
+    Topics: color systems, accessibility, animation, layout, typography, font pairing,
+    spacing, interaction states, shadow, and gradient. Integrations: shadcn/ui MCP
+    for component search and examples.'
   has_references: false
   has_scripts: true
   name: ui-ux-pro-max

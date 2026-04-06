@@ -57,3 +57,6 @@ GoogleService-Info.plist
 .mcp.json
 .gemini/*
 commands/**/meta/*
+commands/git/release
+settings.local.json
+
